@@ -1,0 +1,18 @@
+const express = require("express")
+const router = express.Router()
+const resumeBankControllers = require("../../controllers/ResumeBank/resumeBank.controller")
+
+router.post("/get-interns", resumeBankControllers.getAllResumeBankInterns)
+router.post("/download-resume/:id", resumeBankControllers.resumeBankDownloadResume)
+router.post("/download-resume", resumeBankControllers.downloadResumeBankInFree)
+router.post("/get-downloaded-resumes/:companyId", resumeBankControllers.getDownloadedResumes)
+router.get("/get-intern-cities", resumeBankControllers.getInternCityForResumeFilter)
+router.get("/get-intern-industries", resumeBankControllers.getInternIndustriesForResumeFilter)
+router.get("/get-intern-departments/:industryId", resumeBankControllers.getDepartmentsForResumeFilter)
+router.put("/update-status/:id", resumeBankControllers.updateDownloadedResumeStatus)
+router.delete("/delete-resume/:id", resumeBankControllers.deleteResumeDownload)
+router.get("/get-resume/:activeTab", resumeBankControllers.getInternForTheAdminResumebank)
+router.put("/update-resume-status/:id", resumeBankControllers.updateResumeStatus)
+router.delete("/admin/delete-resume/:id", resumeBankControllers.deleteResumeFromResumeBank)
+router.put("/update-bulk-resume-status", resumeBankControllers.updateResumeBulkStatusUpdate)
+module.exports = router

@@ -1,0 +1,732 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @unique @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map(name: "admins")
+}
+
+enum InternStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum InternshipType {
+  REMOTE
+  OFFICE
+  HYBRID
+}
+
+enum JobType {
+  REMOTE
+  HYBRID
+  OFFICE
+}
+
+enum ApplicationType {
+  JOB
+  INTERNSHIP
+}
+
+enum WorkMode {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  ANY
+} 
+
+
+
+enum JobStatus {
+  REVIEW
+  APPROVED
+  PAUSED
+  COMPLETED
+  REJECTED
+  DRAFT
+}
+
+model Interns {
+  id                      String                @id @unique @default(uuid())
+  fullName                String
+  email                   String                @unique
+  countryCode             String
+  mobileNumber            String                @unique
+  fcmToken                String?
+  profilePicture          String?
+  DOB                     String
+  gender                  Gender                @default(MALE)
+  highestQualification    String
+  collageOrUniversityName String
+  degreeOrCourse          String
+  yosOrGraduationYear     String
+  // cgpaOrPercentage        String
+  resume                  String
+  industry                Json
+  department              Json
+  skills                  Skills[]
+  personalDetails         String?
+  projectLink             Json?
+  internshipType          InternshipType
+  reasonOffboard          String?
+  mobileOtp               String?
+  isMobileVerified        Boolean               @default(false)
+  emailOtp                String?
+  isEmailVerified         Boolean               @default(false)
+  emailOtpExpiry          DateTime?
+  mobileOtpExpiry         DateTime?
+  isResumeActive          Boolean               @default(true)
+  isResumeDeleted         Boolean               @default(false)
+  isProfileComplate       Boolean               @default(true)
+  isDelete                Boolean               @default(false)
+  isOpenToWork            Boolean               @default(true)
+  otpAttempts             Int                   @default(0)
+  emailOtpAttempts        Int                   @default(0)
+  otpVerifyAttempts       Int                   @default(0)
+  otpVerifyBlockedUntil   DateTime?
+  emailOtpVerifyAttempts  Int                   @default(0)
+  emailOtpVerifyBlockedUntil DateTime?
+  applicationType         ApplicationType       @default(INTERNSHIP)
+  experience              String?
+  internStatus            InternStatus          @default(PENDING)
+  candidate               CandidateManagement[]
+  downloadedResumes       DownloadedResumes[]
+  internNotification      InternNotification[]
+  interview               Interview[]
+  linkedin                 String?             
+  github                  String?
+  portfolio               String?
+  employmentType          WorkMode              @default(ANY)
+
+  preferredLocation       City[]   @relation("PreferredLocations")
+  preferredStates          State[]   @relation("PreferredState")
+  preferredAll          Boolean   @default(false)
+  
+
+cityId    String
+city      City @relation("CurrentCity", fields: [cityId], references: [id])
+
+stateId   String
+state     State @relation("CurrentState",fields: [stateId], references: [id])
+
+countryId String
+country   Country @relation(fields: [countryId], references: [id])
+
+
+  // jobCategory             JobCategory?          @relation("InternJobCategories")
+  // jobSubCategory          JobSubCategory?       @relation("InternJobSubCategories")
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([email, isDelete, id, applicationType, isProfileComplate, isOpenToWork, isResumeActive, isResumeDeleted, industry, internStatus, internshipType])
+  @@map(name: "interns")
+}
+
+model CompanyRegistrationDraft {
+  id                String   @id @default(uuid())
+  companyName       String?
+  email             String
+  personDesignation String?
+  personName        String?
+  password          String?
+  companyLogo       String?
+  companySortLogo   String?
+  industryType      String?
+  companySize       String?
+  description       String?
+  panGst            String?
+  country           String?
+  state             String?
+  city              String?
+  pincode           String?
+  headOfficeAddress String?
+  branchOffices     Json?
+  linkedinUrl       String?
+  instagramUrl      String?
+  youtubeUrl        String?
+  registrationStep  Int      @default(1)
+  isCompleted       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map(name: "company_draft")
+}
+
+enum CompanyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Company {
+  id                 String    @id @unique @default(uuid())
+  companyName        String
+  email              String    @unique
+  designation        String
+  hrAndRecruiterName String
+  countryCode        String
+  phoneNumber        String    @unique
+  password           String
+  fcmToken           String?
+  emailOtp              String?
+  isEmailVerified       Boolean   @default(false)
+  emailOtpExpiry        DateTime?
+  emailOtpAttempts      Int       @default(0)
+  emailOtpBlockedUntil  DateTime?
+  mobileOtp             String?
+  isMobileVerified      Boolean   @default(false)
+  mobileOtpExpiry       DateTime?
+  mobileOtpAttempts     Int       @default(0)
+  mobileOtpBlockedUntil DateTime?
+  logo               String?
+  smallLogo          String?
+  industryType       String?
+  companySize        String?
+  companyIntro       String?
+  foundedYear        String?
+  panOrGst           String?
+
+  country        String?
+  state          String?
+  city           String?
+  zipCode        String?
+  address        String?
+  branchLocation Json?
+
+  linkdinUrl            String?
+  instagramUrl          String?
+  youtubeUrl            String?
+  websiteUrl            String?
+  rejectReason          String?
+  AiScore               Int                     @default(0)
+  forgotPasswordAttemts Int                     @default(0)
+  isProfileCompleted    Boolean                 @default(false)
+  companyStatus         CompanyStatus           @default(PENDING)
+  isDelete              Boolean                 @default(false)
+  jobs                  Job[]
+  companySubscription   CompanySubscription[]
+  paymentHistory        PaymentHistory[]
+  support               Support[]
+  candidate             CandidateManagement[]
+  downloadedResumes     DownloadedResumes[]
+  notification          Notification[]
+  companyUpdateRequest  CompanyUpdateRequests[]
+  interview             Interview[]
+  companyIndustry       JobCategory?            @relation(fields: [industryType], references: [id])
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  @@map(name: "companies")
+}
+
+model CompanyUpdateRequests {
+  id                 String    @id @default(uuid())
+  companyId          String
+  companyName        String?
+  email              String?
+  designation        String?
+  hrAndRecruiterName String?
+  countryCode        String?
+  phoneNumber        String?
+  industryType       String?
+  companySize        String?
+  companyIntro       String?
+  foundedYear        String?
+  panOrGst           String?
+  country            String?
+  state              String?
+  city               String?
+  zipCode            String?
+  address            String?
+  branchLocation     String[] // ARRAY field same as company table
+  linkdinUrl         String?
+  instagramUrl       String?
+  youtubeUrl         String?
+  websiteUrl         String?
+  AiScore            String?
+  logo               String?
+  smallLogo          String?
+  companyStatus      String    @default("PENDING")
+  rejectedReason     String?
+  requestedAt        DateTime  @default(now())
+  approvedAt         DateTime?
+  createdAt          DateTime?
+  company            Company   @relation(fields: [companyId], references: [id])
+
+  @@map(name: "company_update_requests")
+}
+
+
+
+model JobCategory {
+  id               String           @id @unique @default(uuid())
+  categoryName     String
+  isDelete         Boolean          @default(false)
+  jobs             Job[]
+  jobSubCategories JobSubCategory[]
+  skills           Skills[]
+  company          Company[]
+  // interns          Interns[]        @relation("InternJobCategories")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([isDelete, id])
+  @@index([id])
+  @@index([createdAt, isDelete])
+  @@index([categoryName, isDelete])
+  @@map(name: "job_categories")
+}
+
+model JobSubCategory {
+  id              String      @id @unique @default(uuid())
+  subCategoryName String
+  jobCategoryId   String
+  isDelete        Boolean     @default(false)
+  jobCategory     JobCategory @relation(fields: [jobCategoryId], references: [id])
+  jobs            Job[]
+  skills          Skills[]
+  // interns         Interns[]   @relation("InternJobSubCategories")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([isDelete, id])
+  @@index([id])
+  @@index([createdAt, isDelete])
+  @@index([subCategoryName, isDelete])
+  @@map(name: "job_sub_categories")
+}
+
+model Skills {
+  id               String         @id @unique @default(uuid())
+  skillName        String
+  jobCategoryId    String
+  jobSubCategoryId String
+  jobCategory      JobCategory    @relation(fields: [jobCategoryId], references: [id])
+  jobSubCategory   JobSubCategory @relation(fields: [jobSubCategoryId], references: [id])
+  isDelete         Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  intern           Interns[]
+
+  @@index([isDelete, id])
+  @@index([id])
+  @@index([createdAt, isDelete])
+  @@index([skillName, isDelete])
+  @@index([jobCategoryId, isDelete])
+  @@index([jobSubCategoryId, isDelete])
+  @@map(name: "skills")
+}
+
+enum StipendValue {
+  YES
+  NO
+}
+
+model Job {
+  id                 String                @id @unique @default(uuid())
+  companyId          String
+  jobTitle           String
+  jobCategoryId      String
+  jobSubCategoryId   String
+  internshipDuration String
+  workingHours       String
+  score              Int                   @default(0)
+  skills             Json
+  aboutJob           String 
+  otherRequirements  String
+  numberOfOpenings   Int
+  stipend            StipendValue          @default(NO)
+  minStipend         Int?
+  maxStipend         Int?
+  additionalBenefits Json
+  rejectReason       String?
+  jobActiveDate      DateTime?
+  jobExpireDate      DateTime?
+  jobDaysActive      Int?
+  experience         String?
+  resumeAccessCredits  Int?                @default(0)
+  appliedCandidates  Int                   @default(0)
+  subscriptionId     String?
+  applicationType    ApplicationType       @default(INTERNSHIP)
+  jobCategory        JobCategory           @relation(fields: [jobCategoryId], references: [id])
+  jobSubCategory     JobSubCategory        @relation(fields: [jobSubCategoryId], references: [id])
+  candidate          CandidateManagement[]
+  interview          Interview[]
+  subscription       Subscription?         @relation(fields: [subscriptionId], references: [id])
+  company            Company               @relation(fields: [companyId], references: [id])
+  jobType            JobType               @default(OFFICE)
+  jobStatus          JobStatus             @default(REVIEW)
+  isDelete           Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+ 
+  states             State[]   @relation("jobState")
+  cities             City[]    @relation("jobCity")
+  employmentType          WorkMode              @default(ANY)
+
+
+
+  @@index([companyId, jobStatus, isDelete])
+  @@index([jobStatus, isDelete])
+  @@index([companyId, isDelete])
+  @@index([jobStatus, createdAt, isDelete])
+  @@index([companyId, createdAt, isDelete])
+  @@map(name: "jobs")
+}
+
+enum SubscriptionTime {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum CandidateStatus {
+  SHORTLISTED
+  REVIEW
+  INTERVIEW
+  HIRED
+  REJECTED
+}
+
+enum SubscriptionType {
+  JOBPOSTING
+  RESUMEBANK
+}
+
+model Subscription {
+  id                   String  @id @unique @default(uuid())
+  packageName          String
+  actualPrice          Int
+  discountedPrice      Int
+  numberOfJobPosting   Int
+  numberOfResumeAccess Int
+  jobDaysActive        Int
+  expireDaysPackage    Int
+  isDelete             Boolean @default(false)
+
+  paymentHistory      PaymentHistory[]
+  companySubscription CompanySubscription[]
+  job                 Job[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@map(name: "subscriptions")
+}
+
+model CandidateManagement {
+  id              String          @id @unique @default(uuid())
+  internId        String
+  jobId           String
+  companyId       String
+  isDelete        Boolean         @default(false)
+  deletedAt       DateTime?
+  isJoined        Boolean         @default(false)
+  candidateStatus CandidateStatus @default(SHORTLISTED)
+  job             Job             @relation(fields: [jobId], references: [id])
+  intern          Interns         @relation(fields: [internId], references: [id])
+  company         Company         @relation(fields: [companyId], references: [id])
+  interview       Interview[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([internId, jobId, companyId, isDelete])
+  @@index([internId, jobId, companyId])
+  @@index([internId, jobId, isDelete])
+  @@index([internId, isDelete])
+  @@index([jobId, companyId, isDelete])
+  @@index([jobId, isDelete])
+  @@index([companyId, isDelete])
+  @@map(name: "candidate_management")
+}
+
+model CompanySubscription {
+  id                  String   @id @unique @default(uuid())
+  companyId           String
+  subscriptionId      String
+  jobPostingCredits   Int
+  resumeAccessCredits Int
+  subscriptionStart   DateTime @default(now())
+  subscriptionEnd     DateTime
+  jobDaysActive       Int      @default(3)
+  isActive            Boolean  @default(true)
+
+  company      Company      @relation(fields: [companyId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, isActive])
+  @@index([companyId])
+  @@map(name: "company_subscription")
+}
+
+model PaymentHistory {
+  id                  String       @id @unique @default(uuid())
+  companyId           String
+  company             Company      @relation(fields: [companyId], references: [id])
+  subscriptionId      String
+  subscription        Subscription @relation(fields: [subscriptionId], references: [id])
+  amountPaid          Int
+  paymentStatus       String?
+  razorpay_order_id   String?
+  razorpay_signature  String?
+  razorpay_payment_id String?
+  purchasedAt         DateTime     @default(now())
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@map(name: "payment_history")
+}
+
+enum SupportStatus {
+  OPEN
+  CLOSED
+}
+
+model Support {
+  id               String            @id @unique @default(uuid())
+  email            String
+  fullName         String
+  companyId        String
+  status           SupportStatus     @default(OPEN)
+  phoneNumber      String
+  isRepliedByAdmin Boolean           @default(false)
+  countryCode      String
+  ticketType       String
+  attachment       String?
+  subject          String
+  message          String
+  company          Company           @relation(fields: [companyId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  support_messages SupportMessages[]
+
+  @@map(name: "support")
+}
+
+model SupportMessages {
+  id               String   @id @unique @default(uuid())
+  message          String?
+  supportId        String
+  isRepliedByAdmin Boolean  @default(false)
+  attachment       String?
+  support          Support? @relation(fields: [supportId], references: [id])
+  createAt         DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map(name: "support_messages")
+}
+
+enum ResumeStatus {
+  REVIEW
+  SHORTLISTED
+  INTERVIEW
+  HIRED
+  REJECTED
+}
+
+model DownloadedResumes {
+  id           String       @id @unique @default(uuid())
+  internId     String
+  companyId    String
+  intern       Interns      @relation(fields: [internId], references: [id])
+  company      Company      @relation(fields: [companyId], references: [id])
+  resumeStatus ResumeStatus @default(REVIEW)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map(name: "downloaded_resumes")
+}
+
+model Country {
+  id     String  @id @default(cuid())
+  name   String
+  iso2   String  @unique
+  states State[]
+  cities City[]
+  interns Interns[]
+
+  @@map(name: "countries")
+}
+
+model State {
+  id        String  @id @default(cuid())
+  name      String
+  iso2      String  @unique
+  countryId String
+  country   Country @relation(fields: [countryId], references: [iso2], onDelete: Cascade)
+  cities    City[]
+
+
+  internCurrentState  Interns[] @relation("CurrentState")
+  InternPreferredState  Interns[] @relation("PreferredState")
+  jobs      Job[] @relation("jobState")
+
+  @@map(name: "states")
+}
+
+model City {
+  id        String  @id @default(cuid())
+  name      String
+  stateId   String
+  countryId String
+  state     State   @relation(fields: [stateId], references: [iso2], onDelete: Cascade)
+  country   Country @relation(fields: [countryId], references: [iso2], onDelete: Cascade)
+  
+  internsCurrentCity   Interns[] @relation("CurrentCity")
+  internsPreferredCity Interns[] @relation("PreferredLocations")
+  jobs      Job[]   @relation("jobCity")
+
+  @@map(name: "cities")
+}
+
+model Notification {
+  id        String   @id @unique @default(uuid())
+  companyId String
+  title     String
+  message   String
+  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map(name: "notifications")
+}
+
+model InternNotification {
+  id        String   @id @unique @default(uuid())
+  internId  String
+  title     String
+  message   String
+  intern    Interns  @relation(fields: [internId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map(name: "intern_notifications")
+}
+
+model BlogCategory {
+  id           String   @id @unique @default(uuid())
+  categoryName String   @unique
+  isDelete     Boolean  @default(false)
+  blogCategory Blog[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([categoryName])
+  @@index([id])
+  @@map(name: "blog_category")
+}
+
+model BlogTag {
+  id        String   @id @unique @default(uuid())
+  tagName   String   @unique
+  isDelete  Boolean  @default(false)
+  blogTag   Blog[]   @relation("BlogTagsRelation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tagName])
+  @@index([id])
+  @@map(name: "blog_tag")
+}
+
+model Blog {
+  id              String       @id @unique @default(uuid())
+  title           String
+  description     String
+  image           String?
+  blogCategoryId  String
+  blogTagIds      Json
+  metaTitle       String?
+  metaDescription String?
+  slug            String?
+  altTag          String?
+  isScheduled     Boolean      @default(false)
+  scheduledDate   DateTime?
+  blogCategory    BlogCategory @relation(fields: [blogCategoryId], references: [id])
+  blogTags        BlogTag[]    @relation("BlogTagsRelation")
+  isDelete        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map(name: "blog")
+}
+
+model ContactUs {
+  id          String   @id @unique @default(uuid())
+  fullName    String
+  email       String
+  country     String
+  phoneNumber String
+  reason      String
+  message     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map(name: "contact_us")
+}
+
+model InternOtps {
+  id                      String    @id @unique @default(uuid())
+  mobileNumber            String    @unique
+  countryCode             String
+  otp                     String
+  otpExpiry               DateTime
+  isVerifies              Boolean   @default(false)
+  otpVerifyAttempts       Int       @default(0)
+  otpVerifyBlockedUntil   DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map(name: "intern_otps")
+}
+
+enum InterViewType {
+  ONLINE
+  OFFLINE
+}
+
+model Interview {
+  id                    String        @id @unique @default(uuid())
+  candidateManagementId String
+  companyId             String
+  jobId                 String
+  internId              String
+  interviewType         InterViewType @default(OFFLINE)
+  interviewDate         String
+  interviewTime         String
+  interviewLink         String?
+  interviewLocation     String?
+  interviewStatus       String?
+  rejectReason          String?
+
+  company             Company             @relation(fields: [companyId], references: [id])
+  job                 Job                 @relation(fields: [jobId], references: [id])
+  intern              Interns             @relation(fields: [internId], references: [id])
+  candidateManagement CandidateManagement @relation(fields: [candidateManagementId], references: [id])
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map(name: "interview")
+}
