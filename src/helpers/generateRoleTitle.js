@@ -1,7 +1,7 @@
 
 const axios = require("axios");
 
-const HF_API_KEY = "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";
+const HF_API_KEY = process.env.HF_API_KEY;
 const MODEL = "meta-llama/Meta-Llama-3-8B-Instruct";
 
 async function generateJobTitles(industry, department, type) {
