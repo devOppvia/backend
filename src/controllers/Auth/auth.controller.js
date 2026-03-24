@@ -51,7 +51,7 @@ exports.createAdmin = async (req, res) => {
     if (existingUsername) {
       return errorResponse(res, "Username already exists", 409);
     }
-    let hasedPassword = await bcrypt.hashSync(password, 10);
+    let hasedPassword = await bcrypt.hash(password, 10);
     await authServices.createAdmin(email, username, hasedPassword);
     return successResponse(res, {}, "Admin created successfully");
   } catch (error) {
@@ -109,7 +109,7 @@ exports.updateAdmin = async (req, res) => {
     if (existingUsername) {
       return errorResponse(res, "Username already exists", 400);
     }
-    let hasedPassword = await bcrypt.hashSync(password, 10);
+    let hasedPassword = await bcrypt.hash(password, 10);
     await authServices.updateAdmin(id, email, username, hasedPassword);
     return successResponse(res, {}, "Admin updated successfully");
   } catch (error) {
@@ -151,7 +151,7 @@ exports.adminPanelLogin = async (req, res) => {
       return errorResponse(res, "Username not registered", 400);
     }
 
-    let isPasswordCorrect = await bcrypt.compareSync(
+    let isPasswordCorrect = await bcrypt.compare(
       password,
       existingAdmin.password
     );
@@ -221,7 +221,7 @@ exports.changeAdminPassword = async (req, res) => {
     if (!existingAdmin) {
       return errorResponse(res, "Email not registered", 400);
     }
-    let isPasswordCorrect = await bcrypt.compareSync(
+    let isPasswordCorrect = await bcrypt.compare(
       oldPassword,
       existingAdmin.password
     );
@@ -235,7 +235,7 @@ exports.changeAdminPassword = async (req, res) => {
         400
       );
     }
-    let hasedPassword = await bcrypt.hashSync(newPassword, 10);
+    let hasedPassword = await bcrypt.hash(newPassword, 10);
     await authServices.changeAdminPassword(email, hasedPassword);
     return successResponse(res, {}, "Password changed successfully");
   } catch (error) {

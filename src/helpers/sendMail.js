@@ -1,7 +1,10 @@
 const { JobStatus } = require("@prisma/client");
 const nodemailer = require("nodemailer");
 
-
+const SMTP_EMAIL = process.env.SMTP_EMAIL;
+const SMTP_PASSWORD = process.env.SMTP_PASS;
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT;
 
 
 const transporter = nodemailer.createTransport({
@@ -9,8 +12,8 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: "dev.oppvia@gmail.com",
-    pass: "rekz qfke prgw wxus",
+    user: "",
+    pass: "",
   },
   tls : {
     rejectUnauthorized : false

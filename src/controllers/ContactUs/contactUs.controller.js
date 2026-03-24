@@ -46,7 +46,6 @@ exports.createContactUs = async (req, res) => {
     });
     return successResponse(res, {}, "Contact us created successfully", {}, 200);
   } catch (error) {
-    console.error(error);
     return errorResponse(res, "Internal server error", 500);  
   }
 };

@@ -20,7 +20,6 @@ const authMiddleware = (req, res, next) => {
     }
 
 
-    console.log("auth token decoded" , decoded)
     req.user = decoded;
     next();
   });

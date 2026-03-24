@@ -153,7 +153,7 @@ exports.companyRegistrationStep1 = async (req, res) => {
         return errorResponse(res, "Company not found", 400);
       }
     }
-    let hasedPassword = bcrypt.hashSync(password, 8);
+    let hasedPassword = bcrypt.hash(password, 8);
     let emailOtp = generateOTP(4);
     let mobileOtp = generateOTP(4);
 

@@ -8,7 +8,6 @@ exports.successResponse = (res, data = {}, message, pagination)=>{
 }
 
 exports.errorResponse = (res, message = "Something went wrong", statusCode = 500)=>{
-    console.log("Error : ", message)
     return res.status(statusCode).json({
         status : false,
         message

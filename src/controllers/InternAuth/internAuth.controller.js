@@ -107,7 +107,7 @@ exports.InternRegistrationStep1 = async (req, res) => {
     if (existingMobileNumber) {
       return errorResponse(res, "Mobile number already exists", 400);
     }
-    let hasedPassword = bcrypt.hashSync(password, 8);
+    let hasedPassword = await bcrypt.hash(password, 8);
     // const otp = String(Math.floor(1000 + Math.random() * 9000));
     let otp = generateOTP();
 
@@ -522,6 +522,28 @@ exports.updateInternJobProfileBasedOnId = async (req, res) => {
       return errorResponse(res, "Intern not found", 404);
     }
 
+    // Check if intern is blocked by any verification
+    const internOtpRecord = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+
+    const now = new Date();
+    const blockTimes = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now);
+
+    if (blockTimes.length > 0) {
+      const maxBlockedUntil = new Date(Math.max(...blockTimes.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil - now) / 60000);
+      return errorResponse(
+        res,
+        `Profile update is blocked due to too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
+        429,
+      );
+    }
+
     /*
     -------------------------
     Normalize Industries
@@ -765,6 +787,29 @@ exports.updateInternProfileBasedOnId = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern not found", 400);
     }
+
+    // Check if intern is blocked by any verification
+    const internOtpRecord = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+
+    const now = new Date();
+    const blockTimes = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now);
+
+    if (blockTimes.length > 0) {
+      const maxBlockedUntil = new Date(Math.max(...blockTimes.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil - now) / 60000);
+      return errorResponse(
+        res,
+        `Profile update is blocked due to too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
+        429,
+      );
+    }
+
     if (password) {
       if (!password) {
         return errorResponse(res, "Password is required", 400);
@@ -1204,7 +1249,8 @@ exports.resendInternMobileNumberOtp = async (req, res) => {
       });
     }
     // const otp = String(Math.floor(1000 + Math.random() * 9000));
-    let otp = "0000";
+    let otp = generateOTP();
+    await sendWhatsAppOTP(mobileNumber, otp);
     await prisma.interns.update({
       where: {
         id: id,
@@ -1251,14 +1297,24 @@ exports.sendOtpInternOtpInEmail = async (req, res) => {
     if (existingEmail) {
       return errorResponse(res, "Email already registered", 400);
     }
-    let { emailOtpAttempts, emailOtpVerifyBlockedUntil } = existingIntern || {};
-    if (emailOtpVerifyBlockedUntil && emailOtpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((emailOtpVerifyBlockedUntil - new Date()) / 60000);
+    let { emailOtpAttempts } = existingIntern || {};
+    const internOtpRecord1 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now1 = new Date();
+    const blockTimes1 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord1?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now1);
+    if (blockTimes1.length > 0) {
+      const maxBlockedUntil1 = new Date(Math.max(...blockTimes1.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil1 - now1) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: emailOtpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil1,
       });
     }
     if (emailOtpAttempts >= 3) {
@@ -1269,7 +1325,6 @@ exports.sendOtpInternOtpInEmail = async (req, res) => {
     }
     // let { email, fullName } = existingIntern || {};
     const otp = generateOTP(4);
-    // let otp = "0000"
     let body = {
       email,
       otp,
@@ -1317,15 +1372,24 @@ exports.verifyOtpInternOtpInEmail = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern not found", 400);
     }
-    let { emailOtp, emailOtpExpiry, emailOtpVerifyBlockedUntil } = existingIntern || {};
-
-    if (emailOtpVerifyBlockedUntil && emailOtpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((emailOtpVerifyBlockedUntil - new Date()) / 60000);
+    let { emailOtp, emailOtpExpiry } = existingIntern || {};
+    const internOtpRecord3 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now3 = new Date();
+    const blockTimes3 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord3?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now3);
+    if (blockTimes3.length > 0) {
+      const maxBlockedUntil3 = new Date(Math.max(...blockTimes3.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil3 - now3) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: emailOtpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil3,
       });
     }
 
@@ -1460,14 +1524,24 @@ exports.sendUpdateEmailOtp = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern not found", 400);
     }
-    let { emailOtpAttempts, emailOtpVerifyBlockedUntil } = existingIntern || {};
-    if (emailOtpVerifyBlockedUntil && emailOtpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((emailOtpVerifyBlockedUntil - new Date()) / 60000);
+    let { emailOtpAttempts } = existingIntern || {};
+    const internOtpRecord4 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now4 = new Date();
+    const blockTimes4 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord4?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now4);
+    if (blockTimes4.length > 0) {
+      const maxBlockedUntil4 = new Date(Math.max(...blockTimes4.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil4 - now4) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: emailOtpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil4,
       });
     }
     if (emailOtpAttempts >= 3) {
@@ -1598,14 +1672,24 @@ exports.sendOtpNewEmail = async (req, res) => {
     if (existingEmail) {
       return errorResponse(res, "Email already registered", 400);
     }
-    let { emailOtpAttempts, emailOtpVerifyBlockedUntil } = existingIntern || {};
-    if (emailOtpVerifyBlockedUntil && emailOtpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((emailOtpVerifyBlockedUntil - new Date()) / 60000);
+    let { emailOtpAttempts } = existingIntern || {};
+    const internOtpRecord5 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now5 = new Date();
+    const blockTimes5 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord5?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now5);
+    if (blockTimes5.length > 0) {
+      const maxBlockedUntil5 = new Date(Math.max(...blockTimes5.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil5 - now5) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: emailOtpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil5,
       });
     }
     if (emailOtpAttempts >= 3) {
@@ -1672,15 +1756,24 @@ exports.verifyNewEmailAndUpdateEmail = async (req, res) => {
     if (existingEmail) {
       return errorResponse(res, "Email already registered", 400);
     }
-    let { emailOtp, emailOtpExpiry, emailOtpVerifyBlockedUntil } = existingIntern || {};
-
-    if (emailOtpVerifyBlockedUntil && emailOtpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((emailOtpVerifyBlockedUntil - new Date()) / 60000);
+    let { emailOtp, emailOtpExpiry } = existingIntern || {};
+    const internOtpRecord6 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now6 = new Date();
+    const blockTimes6 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord6?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now6);
+    if (blockTimes6.length > 0) {
+      const maxBlockedUntil6 = new Date(Math.max(...blockTimes6.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil6 - now6) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: emailOtpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil6,
       });
     }
 
@@ -1744,14 +1837,24 @@ exports.sendUpdateMobileOtp = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern not found", 400);
     }
-    let { otpAttempts, otpVerifyBlockedUntil } = existingIntern || {};
-    if (otpVerifyBlockedUntil && otpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((otpVerifyBlockedUntil - new Date()) / 60000);
+    let { otpAttempts } = existingIntern || {};
+    const internOtpRecord7 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now7 = new Date();
+    const blockTimes7 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord7?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now7);
+    if (blockTimes7.length > 0) {
+      const maxBlockedUntil7 = new Date(Math.max(...blockTimes7.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil7 - now7) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: otpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil7,
       });
     }
     if (otpAttempts >= 3) {
@@ -1814,15 +1917,24 @@ exports.verifyOldMobileOtp = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern not found", 400);
     }
-    let { mobileOtp, mobileOtpExpiry, otpVerifyBlockedUntil } = existingIntern || {};
-
-    if (otpVerifyBlockedUntil && otpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((otpVerifyBlockedUntil - new Date()) / 60000);
+    let { mobileOtp, mobileOtpExpiry } = existingIntern || {};
+    const internOtpRecord8 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now8 = new Date();
+    const blockTimes8 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord8?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now8);
+    if (blockTimes8.length > 0) {
+      const maxBlockedUntil8 = new Date(Math.max(...blockTimes8.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil8 - now8) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: otpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil8,
       });
     }
 
@@ -1886,14 +1998,24 @@ exports.sendOtpNewMobile = async (req, res) => {
     if (existingMobileNumber) {
       return errorResponse(res, "MobileNumber already registered", 400);
     }
-    let { otpAttempts, otpVerifyBlockedUntil } = existingIntern || {};
-    if (otpVerifyBlockedUntil && otpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((otpVerifyBlockedUntil - new Date()) / 60000);
+    let { otpAttempts } = existingIntern || {};
+    const internOtpRecord9 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now9 = new Date();
+    const blockTimes9 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord9?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now9);
+    if (blockTimes9.length > 0) {
+      const maxBlockedUntil9 = new Date(Math.max(...blockTimes9.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil9 - now9) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: otpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil9,
       });
     }
     if (otpAttempts >= 3) {
@@ -1964,15 +2086,24 @@ exports.verifyNewMobileAndUpdateMobile = async (req, res) => {
     if (existingMobileNumber) {
       return errorResponse(res, "mobilenumber already registered", 400);
     }
-    let { mobileOtp, mobileOtpExpiry, otpVerifyBlockedUntil } = existingIntern || {};
-
-    if (otpVerifyBlockedUntil && otpVerifyBlockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((otpVerifyBlockedUntil - new Date()) / 60000);
+    let { mobileOtp, mobileOtpExpiry } = existingIntern || {};
+    const internOtpRecord10 = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+    const now10 = new Date();
+    const blockTimes10 = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord10?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now10);
+    if (blockTimes10.length > 0) {
+      const maxBlockedUntil10 = new Date(Math.max(...blockTimes10.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil10 - now10) / 60000);
       return res.status(429).json({
         success: false,
-        message: `Too many incorrect attempts. Try again after ${minutesLeft} minute(s).`,
+        message: `Too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
         isBlocked: true,
-        blockedUntil: otpVerifyBlockedUntil,
+        blockedUntil: maxBlockedUntil10,
       });
     }
 
@@ -2088,6 +2219,28 @@ exports.switchToJob = async (req, res) => {
     // Check if already in job profile
     if (existingIntern.applicationType === "JOB") {
       return errorResponse(res, "Already in job profile", 400);
+    }
+
+    // Check if intern is blocked by any verification
+    const internOtpRecord = await prisma.internOtps.findUnique({
+      where: { mobileNumber: existingIntern.mobileNumber },
+    });
+
+    const now = new Date();
+    const blockTimes = [
+      existingIntern.emailOtpVerifyBlockedUntil,
+      existingIntern.otpVerifyBlockedUntil,
+      internOtpRecord?.otpVerifyBlockedUntil,
+    ].filter((t) => t && t > now);
+
+    if (blockTimes.length > 0) {
+      const maxBlockedUntil = new Date(Math.max(...blockTimes.map((t) => t.getTime())));
+      const minutesLeft = Math.ceil((maxBlockedUntil - now) / 60000);
+      return errorResponse(
+        res,
+        `Action blocked due to too many incorrect OTP attempts. Try again after ${minutesLeft} minute(s).`,
+        429,
+      );
     }
 
     // Update applicationType to JOB

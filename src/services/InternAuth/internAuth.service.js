@@ -353,7 +353,10 @@ exports.getInternProfileBasedOnId = async (internId) => {
       cityId : true,
       countryId : true,
       isOpenToWork : true,
-      applicationType :  true
+      applicationType :  true,
+      gender:true,
+      DOB:true,
+      
     
     },
   });

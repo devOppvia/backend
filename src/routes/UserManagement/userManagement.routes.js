@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const userManagementControllers = require("../../controllers/UserManagement/userManagement.controller");
 const multer = require("multer");
-
+const authMiddleware = require("../../middlewares/authMiddleware");
+const fs = require("fs")
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: function (req, file, cb) {
@@ -38,20 +39,20 @@ const validateFileSizes = (req, res, next) => {
   }
 };
 router.post(
-  "/student-registration",
+  "/student-registration", authMiddleware,
   uploads.fields([{ name: "resume" }]),validateFileSizes,
   userManagementControllers.studentRegistration
 );
 router.post(
-  "/get-registered-students",
+  "/get-registered-students",authMiddleware,
   userManagementControllers.getStudentDetailsByStatus
 );
 router.put(
-  "/update-student-status/:id",
+  "/update-student-status/:id",authMiddleware,
   userManagementControllers.updateStudentStatus
 );
 router.delete(
-  "/delete-student-details/:id",
+  "/delete-student-details/:id",authMiddleware,
   userManagementControllers.deleteStudentDetails
 );
 

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const companyManagementControllers = require("../../controllers/CompanyManagement/companyManagement.controller");
 const multer = require("multer");
+const authMiddleware = require("../../middlewares/authMiddleware");
 
 const storage = multer.diskStorage({
   destination: "uploads/",
@@ -78,28 +79,29 @@ router.post(
   "/company-registration",
   uploads.fields([{ name: "logo" }]),
   validateFileSizes,
+  authMiddleware,
   companyManagementControllers.companyRegistration
 );
 router.get(
-  "/get-registered-companies/:companyStatus",
+  "/get-registered-companies/:companyStatus",authMiddleware,
   companyManagementControllers.getRegisteredCompaniesBasedOnStatus
 );
 router.get(
-  "/get-company-details/:companyId",
+  "/get-company-details/:companyId",authMiddleware,
   companyManagementControllers.getCompanyDetailsById
 );
 router.put(
-  "/update-company-status/:companyId",
+  "/update-company-status/:companyId",authMiddleware,
   companyManagementControllers.changeCompanyStatus
 );
 router.put(
-  "/update-details/:id",
+  "/update-details/:id",authMiddleware,
   uploads.fields([{ name: "logo" }]),
   validateFileSizes,
   companyManagementControllers.updateCompanyDetails
 );
 router.delete(
-  "/delete-company/:id",
+  "/delete-company/:id",authMiddleware,
   companyManagementControllers.deleteCompanyDetails
 );
 router.post(
@@ -127,7 +129,7 @@ router.get(
 );
 
 router.put(
-  "/update-company-profile/:companyId",
+  "/update-company-profile/:companyId",authMiddleware,
   uploads.fields([{ name: "companyLogo" }, { name: "companySmallLogo" }]),
   validateFileSizes,
   companyManagementControllers.updateCompanyProfile

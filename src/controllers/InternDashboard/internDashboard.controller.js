@@ -117,8 +117,9 @@ exports.getInternDashboardDetails = async (req, res) => {
 
 exports.getRecommendedOpportunities = async (req, res) => {
   try {
+       
     let { InternId } = req.params || {};
-
+    
     if (!InternId) {
       return errorResponse(res, "Intern id is required", 400);
     }
@@ -161,7 +162,7 @@ exports.getRecommendedOpportunities = async (req, res) => {
     const getSkills = await prisma.skills.findMany({
       where : {
         id : {
-          in : existingIntern.skills
+          in : existingIntern.skills.map((i) => i.id)
         }
       },
       select : {
