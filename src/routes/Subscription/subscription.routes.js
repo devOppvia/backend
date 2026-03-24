@@ -16,5 +16,6 @@ router.post("/company/verify-payment", subscriptionController.verifyPayment)
 router.get("/company/get-purchased-subscriptions/:companyId", subscriptionController.getPurchasedSubscriptionPackages)
 router.get("/company/get-packages-job-post/:companyId", subscriptionController.getPurchasedSubscriptionPackagesForPostJob)
 router.get("/company/get-subscription-packages/:companyId", subscriptionController.getSubscriptionPackagesForCompany)
+
 router.get("/company/payment-history/:companyId", subscriptionController.getPaymentHistory)
 module.exports = router

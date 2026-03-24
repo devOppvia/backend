@@ -134,6 +134,8 @@ exports.createBlog = async (req, res) => {
 exports.getAllBlogs = async (req, res) => {
   try {
     let { categoryId,tagIds } = req.body || {};
+    const now = new Date();
+const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
     let whereClause = {
       isDelete: false,
       OR: [
@@ -141,7 +143,7 @@ exports.getAllBlogs = async (req, res) => {
         {
           isScheduled: true,
           scheduledDate: {
-            lte: new Date(), 
+  lte: istNow,
           },
         },
       ],

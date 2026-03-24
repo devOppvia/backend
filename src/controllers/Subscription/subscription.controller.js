@@ -119,6 +119,7 @@ exports.getAllSubscriptions = async (req, res) => {
       200
     );
   } catch (error) {
+    console.log(error)
     return errorResponse(res, "Internal server error", 500);
   }
 };

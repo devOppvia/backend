@@ -78,19 +78,9 @@ exports.getAllSubscription = async () => {
       isDelete: false,
     },
     orderBy: {
-      price: "asc",
+      discountedPrice: "asc",
     },
-    select: {
-      id: true,
-      planName: true,
-      sortDescription: true,
-      price: true,
-      numberOfJobPosting: true,
-      numberOfResumeAccess: true,
-      duration: true,
-      features: true,
-      createdAt: true,
-    },
+   
   });
 };
 
@@ -101,13 +91,13 @@ exports.getAllSubscriptionsForAdmin = async (subscriptionType) => {
       subscriptionType : subscriptionType
     },
     orderBy: {
-      price: "asc",
+      discountedPrice: "asc",
     },
     select: {
       id: true,
       planName: true,
       sortDescription: true,
-      price: true,
+      discountedPrice: true,
       credits : true,
       duration: true,
       features: true,
