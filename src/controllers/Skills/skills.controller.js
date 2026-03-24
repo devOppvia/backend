@@ -49,7 +49,7 @@ exports.createSkill = async (req, res) => {
       return errorResponse(res, "SubCategory not found");
     }
 
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[^\x00-\x1F\x7F]+$/;
 
     // Validate each skill name
     for (const singleSkill of skillName) {
@@ -57,7 +57,7 @@ exports.createSkill = async (req, res) => {
       if (!nameRegex.test(trimmed)) {
         return errorResponse(
           res,
-          `Skill name "${trimmed}" must contain only alphabetic characters and spaces`,
+          `Skill name "${trimmed}" contains invalid characters`,
           400
         );
       }

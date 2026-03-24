@@ -39,7 +39,7 @@ exports.createJobSubCategory = async (req, res) => {
     if(!existingJobCategory){
       return errorResponse(res, "Job category not found", 400)
     }
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[^\x00-\x1F\x7F]+$/;
 
     // Validate each name upfront
     for (let name of subCategoryName) {
@@ -51,7 +51,7 @@ exports.createJobSubCategory = async (req, res) => {
         return errorResponse(res, `SubCategory name must not exceed 50 characters`, 400);
       }
       if (!nameRegex.test(name)) {
-        return errorResponse(res, `SubCategory name must contain only alphabetic characters and spaces`, 400);
+        return errorResponse(res, `SubCategory name contains invalid characters`, 400);
       }
     }
 
@@ -234,11 +234,11 @@ exports.updateJobSubCategory = async (req, res) => {
         400
       );
     }
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[^\x00-\x1F\x7F]+$/;
     if (!nameRegex.test(subCategoryName)) {
       return errorResponse(
         res,
-        "SubCategory name must contain only letters and spaces",
+        "SubCategory name contains invalid characters",
         400
       );
     }

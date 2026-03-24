@@ -17,7 +17,7 @@ exports.createJobCategory = async (req, res) => {
       return errorResponse(res, "Category name is required", 400);
     }
     categoryName = categoryName.trim();
-    const nameRegex = /^[A-Za-z\s]+$/;
+    const nameRegex = /^[^\x00-\x1F\x7F]+$/;
 
     if (categoryName.length < 3) {
       return errorResponse(
@@ -38,7 +38,7 @@ exports.createJobCategory = async (req, res) => {
     if (!nameRegex.test(categoryName)) {
       return errorResponse(
         res,
-        "Category name can only contain letters and spaces",
+        "Category name contains invalid characters",
         400
       );
     }
@@ -156,12 +156,12 @@ exports.updateJobCategory = async (req, res) => {
       return errorResponse(res, "Category name is required", 400);
     }
     categoryName = categoryName.trim();
-    const nameRegex = /^[A-Za-z ]+$/;
+    const nameRegex = /^[^\x00-\x1F\x7F]+$/;
 
     if (!nameRegex.test(categoryName)) {
       return errorResponse(
         res,
-        "Category name must contain only alphabets and spaces",
+        "Category name contains invalid characters",
         400
       );
     }
