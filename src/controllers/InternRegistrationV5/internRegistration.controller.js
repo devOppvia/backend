@@ -71,6 +71,7 @@ exports.InternRegistrationSendOtp = async (req, res) => {
     // if(!response.success){
     //   return errorResponse(res, "Failed to send OTP", 500);
     // }
+    await sendWhatsAppOTP(mobileNumber, otp)
     let checkUser = await prisma.internOtps.findUnique({
       where: {
         mobileNumber: mobileNumber,
