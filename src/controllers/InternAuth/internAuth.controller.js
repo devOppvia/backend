@@ -430,6 +430,17 @@ exports.internLogin = async (req, res) => {
         applicationType: existingIntern.applicationType,
       },
       process.env.JWT_SECRET,
+      { expiresIn: "4h" }
+    );
+    const refreshToken = jwt.sign(
+      {
+        id: existingIntern.id,
+        email: existingIntern.email,
+        fullName: existingIntern.fullName,
+        applicationType: existingIntern.applicationType,
+      },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: "7d" }
     );
 
     let internData = {
@@ -441,6 +452,7 @@ exports.internLogin = async (req, res) => {
     };
     let response = {
       accessToken: token,
+      refreshToken: refreshToken,
       internData,
     };
     return successResponse(res, response, "Login successfully", {}, 200);

@@ -546,8 +546,21 @@ exports.companyLogin = async (req, res) => {
         email: existingEmail.email,
         hrAndRecruiterName: existingEmail.hrAndRecruiterName,
       },
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET,
+      { expiresIn: "4h" }
+
     );
+    let refreshToken = jwt.sign(
+      {
+        id: existingEmail.id,
+        email: existingEmail.email,
+        hrAndRecruiterName: existingEmail.hrAndRecruiterName,
+      },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: "7d" }
+    );
+
+
     let userData = {
       id: existingEmail.id,
       email: existingEmail.email,
@@ -557,6 +570,7 @@ exports.companyLogin = async (req, res) => {
     };
     let response = {
       accessToken: token,
+      refreshToken: refreshToken,
       userData,
     };
     return successResponse(res, response, "Login successfully", {}, 200);

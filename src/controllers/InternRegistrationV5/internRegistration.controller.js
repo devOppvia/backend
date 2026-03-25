@@ -176,6 +176,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
       isInternRegistered = true;
     }
     let token;
+    let refreshToken;
     let internData
     if (isInternRegistered) {
       token = jwt.sign(
@@ -187,9 +188,22 @@ exports.verifyRegistrationOtp = async (req, res) => {
           applicationType: checkUserInDb.applicationType,
         },
         process.env.JWT_SECRET,
-        // {
-        //   expiresIn: "24h",
-        // }
+        {
+          expiresIn: "4h",
+        }
+      );
+       refreshToken = jwt.sign(
+        {
+          id: checkUserInDb.id,
+          email: checkUserInDb.email,
+          mobileNumber: checkUserInDb.mobileNumber,
+          fullName: checkUserInDb.fullName,
+          applicationType: checkUserInDb.applicationType,
+        },
+        process.env.JWT_REFRESH_SECRET,
+        {
+          expiresIn: "7d",
+        }
       );
       internData = {
         id: checkUserInDb.id,
@@ -212,6 +226,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
       res,
       {
         accessToken: token,
+        refreshToken: refreshToken,
         isInternRegistered: isInternRegistered,
         internData: internData,
       },
@@ -519,12 +534,26 @@ exports.internRegistration = async (req, res) => {
           applicationType: checkUser.applicationType,
         },
         process.env.JWT_SECRET,
-        // {
-        //   expiresIn: "24h",
-        // }
+        {
+          expiresIn: "4h",
+        }
       );
 
-     internData = {
+      const refreshToken = jwt.sign(
+        {
+          id: checkUser.id,
+          email: checkUser.email,
+          mobileNumber: checkUser.mobileNumber,
+          fullName: checkUser.fullName,
+          applicationType: checkUser.applicationType,
+        },
+        process.env.JWT_REFRESH_SECRET,
+        {
+          expiresIn: "7d",
+        }
+      );
+
+     const internData = {
         id: checkUser.id,
         fullName: checkUser.fullName,
         email: checkUser.email,
@@ -533,7 +562,7 @@ exports.internRegistration = async (req, res) => {
         applicationType: checkUser.applicationType,
       }
 
-    return successResponse(res, {accessToken : token, internData}, "Intern registered successfully", {}, 200);
+    return successResponse(res, {accessToken : token, refreshToken , internData}, "Intern registered successfully", {}, 200);
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);

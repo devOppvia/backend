@@ -1,0 +1,741 @@
+================================================================================
+                        OPPVIA BACKEND - COMPLETE FLOW
+================================================================================
+
+PROJECT OVERVIEW
+----------------
+Oppvia is a Job/Internship platform backend API built with:
+  - Runtime      : Node.js + Express.js
+  - Database     : PostgreSQL (via Prisma ORM)
+  - Auth         : JWT (Access Token + Refresh Token via cookie)
+  - Real-time    : Socket.IO
+  - File Upload  : Multer (stored in /uploads folder)
+  - Email        : Nodemailer (SMTP/Gmail)
+  - SMS/WhatsApp : Twilio
+  - AI           : Google Gemini 2.0 Flash API
+  - Payments     : Razorpay
+  - Push Notif.  : Firebase Admin (FCM)
+  - Server Port  : 8008
+
+Three Portals:
+  1. Admin Panel      (admin.oppvia.in)
+  2. Company/Recruiter (recruiter.oppvia.in)
+  3. Intern/Talent     (talent.oppvia.in)
+
+================================================================================
+                         ENTRY POINT & BOOT SEQUENCE
+================================================================================
+
+src/server.js  (entry point)
+  |
+  |-- loads .env
+  |-- creates Express app (src/app.js)
+  |-- creates HTTP server
+  |-- initSocket(server)         --> Socket.IO initialized
+  |-- requires CronJob.js        --> 4 cron jobs start
+  |-- requires companyVerification.js (empty, reserved)
+  |-- requires resetLimitCount.js
+  |-- starts server on PORT 8008
+  |
+  Static routes:
+    GET /                              --> health check
+    GET /api/v1/get-images/:path       --> serve uploaded images
+    GET /api/v1/get-email-templates/:path --> serve email media assets
+
+src/app.js
+  |-- CORS (whitelisted origins: localhost dev, LAN IPs, oppvia.in domains)
+  |-- cookie-parser
+  |-- express.json (limit 50mb)
+  |-- express.urlencoded (limit 50mb)
+  |-- morgan (dev logging)
+  |-- mounts all routes at /api/v1
+  |-- errorMiddleware (global error handler)
+
+================================================================================
+                            DATABASE MODELS (Prisma)
+================================================================================
+
+Admin               --> Platform admin accounts (username/email/password)
+Interns             --> Job seekers / internship seekers
+Company             --> Employer / recruiter accounts
+CompanyRegistrationDraft --> Temporary draft during company multi-step signup
+CompanyUpdateRequests    --> Pending profile change requests from companies
+Job                 --> Job/Internship postings by companies
+JobCategory         --> Industry categories (e.g. IT, Finance)
+JobSubCategory      --> Sub-categories (e.g. Frontend, Backend)
+Skills              --> Skills linked to categories/subcategories
+Subscription        --> Subscription packages (job posting + resume access credits)
+CompanySubscription --> Active subscription assigned to a company
+PaymentHistory      --> Razorpay payment records
+CandidateManagement --> Applications (Intern applied to a Job)
+Interview           --> Interview scheduled for a candidate
+DownloadedResumes   --> Resumes accessed by companies from resume bank
+Support             --> Support tickets raised by companies
+SupportMessages     --> Replies within a support ticket thread
+Notification        --> Notifications for companies
+InternNotification  --> Notifications for interns
+Blog                --> Blog posts
+BlogCategory        --> Blog categories
+BlogTag             --> Blog tags
+ContactUs           --> Contact form submissions
+InternOtps          --> OTP records for intern mobile verification
+Country/State/City  --> Location master data (seeded)
+
+Key Enums:
+  InternStatus    : PENDING | APPROVED | REJECTED
+  CompanyStatus   : PENDING | APPROVED | REJECTED
+  JobStatus       : REVIEW | APPROVED | PAUSED | COMPLETED | REJECTED | DRAFT
+  CandidateStatus : SHORTLISTED | REVIEW | INTERVIEW | HIRED | REJECTED
+  ApplicationType : JOB | INTERNSHIP
+  InternshipType  : REMOTE | OFFICE | HYBRID
+  JobType         : REMOTE | HYBRID | OFFICE
+  WorkMode        : FULL_TIME | PART_TIME | CONTRACT | ANY
+  StipendValue    : YES | NO
+
+================================================================================
+                           ROUTE MAP (/api/v1/...)
+================================================================================
+
+/auth                  --> Admin auth (login, CRUD admins, refresh token)
+/intern                --> Intern auth (register steps, login, profile, OTP)
+/company-auth          --> Company auth (register steps, login, OTP, forgot pwd)
+/users                 --> User/Admin management (admin portal)
+/company               --> Company profile management
+/jobs                  --> Job postings management
+/subscription          --> Subscription plans
+/interns               --> Intern management (admin view)
+/candidate             --> Candidate application management
+/resume-bank           --> Resume bank for companies
+/admin                 --> Admin dashboard
+/company-dashboard     --> Company dashboard stats
+/explore-internship    --> Public internship/job browsing
+/intern-dashboard      --> Intern dashboard (applications, status)
+/interview             --> Interview scheduling
+/job-alert             --> Job alert setup for interns
+/job-category          --> Job category CRUD
+/job-subCategory       --> Job sub-category CRUD
+/skills                --> Skills CRUD
+/subscription          --> Subscription plan management
+/support               --> Support ticket system
+/notification          --> Company notifications
+/intern-notification   --> Intern notifications
+/location              --> Location (country/state/city) lookup
+/home                  --> Public home page data
+/blogs                 --> Blog CRUD
+/blog-category         --> Blog category CRUD
+/blog-tag              --> Blog tag CRUD
+/contact-us            --> Contact form
+/intern-registration   --> Intern multi-step registration (v5)
+
+================================================================================
+                         AUTHENTICATION FLOW
+================================================================================
+
+---- ADMIN LOGIN ----
+POST /api/v1/auth/admin-login
+  1. Validate username + password from body
+  2. Lookup admin by username in DB
+  3. bcrypt.compare(password, hash)
+  4. Sign JWT accessToken (7d) with { id, email, username }
+  5. Sign JWT refreshToken (7d) stored in httpOnly cookie
+  6. Return { adminData, accessToken }
+
+POST /api/v1/auth/refresh-token
+  1. Read refreshToken from cookie
+  2. jwt.verify with JWT_REFRESH_SECRET
+  3. Issue new accessToken (1 min expiry)
+
+Middleware: authMiddleware
+  --> Reads Bearer token from Authorization header
+  --> Verifies JWT_SECRET
+  --> Attaches decoded user to req.user
+
+Middleware: isAdminMiddleware
+  --> Reads req.user.id
+  --> Confirms admin exists in DB
+  --> Calls next() or returns 404
+
+---- INTERN MULTI-STEP REGISTRATION ----
+POST /api/v1/intern/registration-step1
+  - Fields: fullName, email, countryCode, mobileNumber, password, profile_picture (file)
+  - Hashes password with bcrypt
+  - Generates OTP, sets mobileOtpExpiry (3 min)
+  - Creates or updates Interns record
+  - Sends OTP via WhatsApp (Twilio)
+  - Returns intern id for subsequent steps
+
+POST /api/v1/intern/verify-intern-mobile-otp
+  - Verifies OTP, marks isMobileVerified = true
+
+POST /api/v1/intern/registration-step2
+  - Fields: DOB, gender, country, state, city, preferredLocation
+
+POST /api/v1/intern/registration-step3
+  - Fields: highestQualification, collageOrUniversityName, degreeOrCourse,
+            yosOrGraduationYear
+
+POST /api/v1/intern/registration-step4 (file upload)
+  - Fields: industry, department, skills, projectLinks, internAbout, resume (PDF)
+  - Resume: max 5MB | Profile picture: max 1MB
+
+POST /api/v1/intern/registration-step5
+  - Fields: internshipType, durationPreference, language
+  - Sets isProfileComplate = true, internStatus = APPROVED
+  - Registration complete
+
+POST /api/v1/intern/login
+  - email + password
+  - bcrypt.compare
+  - Returns JWT token
+
+---- COMPANY MULTI-STEP REGISTRATION ----
+POST /api/v1/company-auth/registration-step1
+  - Fields: companyName, email, designation, hrAndRecruiterName,
+            countryCode, phoneNumber, password, fcmToken
+  - Generates OTP for both email and mobile (3 min expiry)
+  - Creates or updates Company record
+  - Sends OTP via email (Nodemailer) and WhatsApp (Twilio)
+
+POST /api/v1/company-auth/verify-company-email-otp/:companyId
+POST /api/v1/company-auth/verify-company-mobile-otp/:companyId
+  - Verifies OTP, marks isEmailVerified / isMobileVerified = true
+
+POST /api/v1/company-auth/registration-step2 (file upload)
+  - Fields: logo (max 2MB), smallLogo (max 1MB), industryType, companySize,
+            companyIntro, foundedYear, panOrGst, websiteUrl
+
+POST /api/v1/company-auth/registration-step3
+  - Fields: country, state, city, zipCode, address, branchLocations
+
+POST /api/v1/company-auth/registration-step4
+  - Fields: linkdinUrl, instagramUrl, youtubeUrl, websiteUrl
+  - Sets isProfileCompleted = true
+  - Company profile complete; companyStatus = PENDING (awaiting admin approval)
+
+POST /api/v1/company-auth/login
+  - email + password + isProfileCompleted = true
+  - Returns JWT token
+
+POST /api/v1/company-auth/forgot-password
+  - Sends reset link via email (Nodemailer)
+
+POST /api/v1/company-auth/reset-password
+  - Resets password using token from email link
+
+================================================================================
+                           JOB POSTING FLOW
+================================================================================
+
+Company posts a job:
+POST /api/v1/jobs/submit-job-opening
+  1. Company submits job details (title, category, subcategory, skills,
+     aboutJob, requirements, openings, stipend, jobType, location, etc.)
+  2. Checks company's active CompanySubscription for jobPostingCredits
+  3. Decrements jobPostingCredits by 1
+  4. Sets jobDaysActive from subscription, calculates jobExpireDate
+  5. Sets resumeAccessCredits on the Job record
+  6. Job created with jobStatus = REVIEW, score = 0
+  7. CronJob picks it up --> Gemini AI scores the job (0-100)
+     - If description invalid/spam --> jobStatus = REJECTED with rejectReason
+     - If valid --> score saved, job remains in REVIEW for admin to approve
+
+Admin reviews job:
+PUT /api/v1/jobs/update-job-status/:jobId
+  - Admin sets status to APPROVED / REJECTED / PAUSED
+  - On APPROVED: jobActiveDate set, jobExpireDate calculated
+  - On REJECTED: rejectReason saved, email sent to company (Nodemailer)
+
+Job visible to interns:
+GET /api/v1/explore-internship/...
+  - Public API, no auth required
+  - Returns APPROVED jobs with filters (category, type, location, stipend, etc.)
+  - Pagination supported
+
+================================================================================
+                        SUBSCRIPTION & PAYMENT FLOW
+================================================================================
+
+Admin creates subscription packages:
+POST /api/v1/subscription/create  (admin protected)
+  - packageName, actualPrice, discountedPrice
+  - numberOfJobPosting (job posting credits)
+  - numberOfResumeAccess (resume bank credits)
+  - jobDaysActive (how many days each job posting stays live)
+  - expireDaysPackage (subscription validity in days)
+
+Company purchases subscription:
+  1. Company views packages: GET /api/v1/subscription/get-all
+  2. Company initiates payment --> Razorpay order created
+  3. On payment success:
+     - PaymentHistory record created
+     - CompanySubscription record created with:
+       * jobPostingCredits = numberOfJobPosting
+       * resumeAccessCredits = numberOfResumeAccess
+       * subscriptionEnd = now + expireDaysPackage
+       * isActive = true
+
+Credits deducted:
+  - Each job post: jobPostingCredits - 1
+  - Each resume download from resume bank: resumeAccessCredits - 1
+
+CronJob (every 30 seconds) checks:
+  - Expired subscriptions (subscriptionEnd < now) --> isActive = false
+  - Zero credit subscriptions (credits <= 0)     --> isActive = false
+  - Expired jobs (jobExpireDate < now, APPROVED)  --> jobStatus = COMPLETED
+
+================================================================================
+                        CANDIDATE / APPLICATION FLOW
+================================================================================
+
+Intern applies to a job:
+POST /api/v1/candidate/apply
+  - Creates CandidateManagement record
+  - candidateStatus = SHORTLISTED (default)
+  - Increments Job.appliedCandidates counter
+  - Sends notification to company (Socket.IO real-time + DB Notification)
+
+Company manages applications:
+GET  /api/v1/candidate/get-candidates/:jobId
+  - Returns list of candidates for a job
+
+PUT  /api/v1/candidate/update-status/:candidateId
+  - Company moves candidate through pipeline:
+    SHORTLISTED --> REVIEW --> INTERVIEW --> HIRED | REJECTED
+
+Interview scheduling:
+POST /api/v1/interview/schedule
+  - Creates Interview record with date, time, type (ONLINE/OFFLINE)
+  - Sends notification to intern (InternNotification + Socket.IO)
+
+================================================================================
+                           RESUME BANK FLOW
+================================================================================
+
+Company searches resume bank:
+POST /api/v1/resume-bank/get-resumes
+  - Filters: skills, location, qualification, internshipType, etc.
+  - Only returns interns with isResumeActive=true, isDelete=false
+
+Company downloads/views resume:
+POST /api/v1/resume-bank/download-resume
+  1. Checks company has active subscription with resumeAccessCredits > 0
+  2. Creates DownloadedResumes record
+  3. Decrements resumeAccessCredits on CompanySubscription
+  4. Returns resume file path
+
+================================================================================
+                             AI INTEGRATION FLOW
+================================================================================
+
+Gemini 2.0 Flash API is used in 5 places:
+
+1. Job Score (CronJob - every 30s)
+   - Picks job with jobStatus=REVIEW and score=0
+   - Validates description first (spam/abuse check via validateJobDescription)
+   - Generates evaluation prompt from job details
+   - Sends to Gemini --> returns integer score (0-100)
+   - Updates Job.score
+
+2. Company Score (CronJob - every 30s)
+   - Picks company with companyStatus=PENDING and AiScore=0
+   - Generates evaluation prompt from company profile
+   - Sends to Gemini --> returns score (0-10)
+   - Updates Company.AiScore
+
+3. Job About/Description Generation
+   POST /api/v1/jobs/generate-job-about
+   POST /api/v1/jobs/about-job
+   - Company provides job title, category, etc.
+   - Gemini generates professional job description
+
+4. Job Other Requirements Generation
+   POST /api/v1/jobs/generate-job-other-requirements
+   - Similar to above, generates requirements section
+
+5. Job Categories / Subcategories / Skills Generation (Admin)
+   - Admin can prompt Gemini to suggest new categories, subcategories, and skills
+   - GenerateNewJobCategories / GenerateNewJobSubCategory / GenerateNewSkills
+
+6. Intern "About Me" Generation
+   POST /api/v1/intern/generate-about-us
+   - Intern provides profile details
+   - Gemini generates a personal summary / about section
+
+================================================================================
+                            SOCKET.IO REAL-TIME FLOW
+================================================================================
+
+Server: src/socket/socket.js
+
+Connections managed:
+  - admins Set          --> tracks all connected admin socket IDs
+  - companyConnections  --> Map of companyId -> [socketId, ...]
+
+Events:
+  "register_admin"          --> admin frontend registers after login
+  "register_company"        --> company frontend registers with companyId
+  "join_support"            --> joins a support ticket room (supportId)
+  "disconnect"              --> removes from admins/companyConnections
+
+Real-time notifications sent:
+  - When a candidate applies to a job --> emit to company socket
+  - When admin approves/rejects company --> emit to company socket
+  - When interview is scheduled --> emit to intern (via InternNotification)
+  - Support ticket replies --> emit to support room
+
+================================================================================
+                           COMPANY MANAGEMENT FLOW
+================================================================================
+
+Admin approves/rejects company:
+PUT /api/v1/company/update-company-status/:companyId
+  - Admin sets companyStatus = APPROVED | REJECTED
+  - On APPROVED: company can now post jobs (if they have subscription)
+  - On REJECTED: rejectReason saved, email sent to company
+  - Socket.IO emits status update to company in real-time
+
+Company profile update:
+  - Company submits changes via PUT /api/v1/company/...
+  - Changes go into CompanyUpdateRequests (PENDING)
+  - Admin reviews and approves/rejects the update request
+  - On approval: company main record updated
+
+Email/Mobile change flow (6 steps):
+  1. Send OTP to OLD email/mobile
+  2. Verify OTP on OLD email/mobile
+  3. Send OTP to NEW email/mobile
+  4. Verify OTP on NEW email/mobile
+  5. Update email/mobile in DB
+
+================================================================================
+                           ADMIN DASHBOARD FLOW
+================================================================================
+
+POST /api/v1/admin/get-dashboard-details  (authMiddleware + isAdmin)
+  - Returns aggregated stats:
+    * Total interns, companies, jobs, applications
+    * Pending approvals count
+    * Recent registrations
+    * Subscription revenue
+
+Company management (admin):
+  GET  /api/v1/users/...       --> list/filter companies and interns
+  PUT  /api/v1/users/...       --> approve/reject/delete
+
+Job management (admin):
+  POST /api/v1/jobs/admin/get-jobs    --> paginated list with filters
+  PUT  /api/v1/jobs/update-job-status --> approve/reject
+  PUT  /api/v1/jobs/update-bulk-status --> bulk approve/reject
+
+================================================================================
+                              BLOG FLOW
+================================================================================
+
+Admin creates blog:
+POST /api/v1/blogs/create
+  - title, description, image, blogCategoryId, blogTagIds
+  - metaTitle, metaDescription, slug, altTag (SEO fields)
+  - isScheduled flag + scheduledDate (IST timezone scheduling)
+  - If scheduled: blog goes live on scheduledDate via cron
+
+Blog categories & tags: CRUD at /api/v1/blog-category and /api/v1/blog-tag
+
+Public blog access:
+GET /api/v1/blogs/get-all       --> paginated list
+GET /api/v1/blogs/get-blog/:id  --> single blog
+
+================================================================================
+                              SUPPORT TICKET FLOW
+================================================================================
+
+Company raises ticket:
+POST /api/v1/support/create
+  - email, fullName, phoneNumber, ticketType, subject, message, attachment
+  - Status = OPEN
+
+Admin replies:
+POST /api/v1/support/reply/:supportId
+  - Creates SupportMessages record with isRepliedByAdmin = true
+  - Socket.IO emits reply to company via support room (join_support event)
+
+Company replies back:
+POST /api/v1/support/reply/:supportId
+  - isRepliedByAdmin = false
+
+Admin closes ticket:
+PUT /api/v1/support/close/:supportId
+  - status = CLOSED
+
+================================================================================
+                           NOTIFICATION FLOW
+================================================================================
+
+Company Notifications:
+  - Stored in Notification table
+  - GET /api/v1/notification/get/:companyId  --> fetch notifications
+  - Delivered via Socket.IO real-time + DB persistence
+
+Intern Notifications:
+  - Stored in InternNotification table
+  - GET /api/v1/intern-notification/get/:internId
+  - Triggered on: application status change, interview scheduled
+
+Firebase Push Notifications:
+  - FCM tokens stored on Interns and Company records
+  - src/helpers/WebPushNotification/notificationHelper.js
+  - Sends push notifications via Firebase Admin SDK
+
+================================================================================
+                        JOB ALERT FLOW
+================================================================================
+
+Intern sets up job alert:
+POST /api/v1/job-alert/create
+  - Intern specifies: category, subcategory, location, jobType preferences
+  - Alert stored in DB
+
+CronJob (daily):
+  - Matches new approved jobs against alert criteria
+  - Sends email/notification to matching interns
+
+================================================================================
+                         LOCATION MASTER DATA FLOW
+================================================================================
+
+Seeded once via: seeds/statecityseeder.js
+  - Countries, States, Cities populated in DB
+
+APIs:
+GET /api/v1/location/get-countries
+GET /api/v1/location/get-states/:countryId
+GET /api/v1/location/get-cities/:stateId
+  - Used in registration forms for dropdown population
+
+================================================================================
+                         FILE UPLOAD FLOW
+================================================================================
+
+All uploads handled by Multer:
+  - Storage: local disk at /uploads/
+  - Filename: {timestamp}-{originalname}
+
+File size limits:
+  - Company logo     : 2MB
+  - Company smallLogo: 1MB
+  - Intern resume    : 5MB
+  - Intern profile picture: 1MB
+
+File serving:
+GET /api/v1/get-images/:image_path
+  - Reads from /uploads/ folder and streams the file
+
+================================================================================
+                         OTP VERIFICATION FLOW
+================================================================================
+
+OTP Generation: src/helpers/generateOTP.js
+  - Generates 6-digit numeric OTP
+  - OTP expiry: 3 minutes from generation
+
+OTP Delivery:
+  - Mobile OTP: WhatsApp via Twilio (sendWhatsAppOTP)
+  - Email OTP : Nodemailer (sendMail)
+
+OTP Verification with brute-force protection:
+  - Max attempts tracked (otpVerifyAttempts field)
+  - On max attempts exceeded: otpVerifyBlockedUntil set (cooldown)
+  - After cooldown expires, attempts reset
+
+Resend OTP:
+  - POST /verify-intern-mobile-otp  / /resend-intern-mobile-otp
+  - POST /verify-company-email-otp  / /resend-company-email-otp
+
+================================================================================
+                           CRON JOBS (Background Tasks)
+================================================================================
+
+All running at: */30 * * * * * (every 30 seconds - dev mode)
+Production schedule (commented): */5 * * * * (every 5 min) or 0 * * * * (hourly)
+
+Job 1: generateCompanyScore
+  - Finds one pending company with AiScore = 0
+  - Calls Gemini API to evaluate company profile
+  - Saves AiScore (0-10)
+
+Job 2: getExpiredSubscriptions
+  - Sets isActive = false for CompanySubscriptions past subscriptionEnd date
+
+Job 3: getExpiredJobs
+  - Finds APPROVED jobs past jobExpireDate
+  - Sets jobStatus = COMPLETED
+
+Job 4: getJobPostingExpired
+  - Finds active subscriptions with jobPostingCredits <= 0 OR resumeAccessCredits <= 0
+  - Sets isActive = false
+
+Additional (in separate files):
+  - resetLimitCount.js : Resets OTP attempt counters periodically
+  - generateJobScore   : Scores REVIEW jobs via Gemini (CronJob.js)
+
+================================================================================
+                         INTERN EXPLORE / SEARCH FLOW
+================================================================================
+
+Public job browsing (no auth):
+POST /api/v1/explore-internship/get-internships
+  - Filters: category, subcategory, location (state/city), jobType,
+             stipend, workMode, applicationType (JOB/INTERNSHIP)
+  - Only returns jobs with jobStatus = APPROVED, isDelete = false
+  - Pagination: page + limit
+
+GET /api/v1/explore-internship/get-internship/:jobId
+  - Single job details with company info
+
+GET /api/v1/home/...
+  - Homepage data: featured jobs, stats, categories
+
+================================================================================
+                         INTERN DASHBOARD FLOW
+================================================================================
+
+GET /api/v1/intern-dashboard/...  (auth required)
+  - Applied jobs and their statuses
+  - Interview schedules
+  - Notifications
+  - Profile completion status
+
+Intern can:
+  - Switch application type (JOB <--> INTERNSHIP) via POST /api/v1/intern/switch-to-job
+  - Toggle "Open to Work" via POST /api/v1/intern/open-to-work/:id
+  - Update profile (personal + job profile separately)
+  - Change email/mobile (6-step OTP verification)
+
+================================================================================
+                      RESPONSE FORMAT (Standard)
+================================================================================
+
+All APIs return JSON in this format (src/utils/responseHeader.js):
+
+Success:
+{
+  "status": true,
+  "message": "...",
+  "data": { ... }
+}
+
+Error:
+{
+  "status": false,
+  "message": "...",
+  "data": {}
+}
+
+HTTP status codes used: 200, 201, 400, 401, 403, 404, 409, 500
+
+================================================================================
+                        ENVIRONMENT VARIABLES REQUIRED
+================================================================================
+
+DATABASE_URL           - PostgreSQL connection string
+JWT_SECRET             - JWT signing secret (access token)
+JWT_REFRESH_SECRET     - JWT signing secret (refresh token)
+GEMINI_API_KEY         - Google Gemini AI API key
+SMTP_EMAIL             - SMTP email address
+SMTP_PASS              - SMTP password
+SMTP_HOST              - SMTP host
+SMTP_PORT              - SMTP port
+TWILIO_ACCOUNT_SID     - Twilio account SID
+TWILIO_AUTH_TOKEN      - Twilio auth token
+TWILIO_WHATSAPP_NUMBER - Twilio WhatsApp sender number
+NODE_ENV               - "production" | "development"
+PORT                   - Server port (default 8008)
+HF_API                 - Hugging Face API key (reserved)
+
+================================================================================
+                     DIRECTORY STRUCTURE OVERVIEW
+================================================================================
+
+backend/
+  src/
+    app.js                    --> Express app setup (middleware, routes)
+    server.js                 --> HTTP server, Socket.IO, cron init
+    config/
+      database.js             --> Prisma client singleton
+    routes/
+      index.js                --> Central route aggregator
+      Auth/                   --> Admin auth routes
+      InternAuth/             --> Intern auth + profile routes
+      CompanyAuth/            --> Company auth + registration routes
+      Admin/                  --> Admin dashboard routes
+      JobManagement/          --> Job CRUD routes
+      Subscription/           --> Subscription package routes
+      CandidateManagement/    --> Application management routes
+      ResumeBank/             --> Resume bank routes
+      InternManagement/       --> Admin view of interns
+      CompanyManagement/      --> Admin view of companies
+      CompanyDashboard/       --> Company dashboard routes
+      ExploreInternship/      --> Public job browsing routes
+      InternDashboard/        --> Intern dashboard routes
+      Interview/              --> Interview scheduling routes
+      JobCategory/            --> Category CRUD
+      JobSubCategory/         --> Sub-category CRUD
+      Skills/                 --> Skills CRUD
+      Support/                --> Support ticket routes
+      Notifications/          --> Company notification routes
+      InternNotifications/    --> Intern notification routes
+      JobAlert/               --> Job alert routes
+      Blogs/                  --> Blog routes
+      BlogCategory/           --> Blog category routes
+      BlogTags/               --> Blog tag routes
+      Home/                   --> Public home routes
+      Locations/              --> Location data routes
+      ContactUs/              --> Contact form route
+      InternRegistrationV5/   --> Alternate intern registration flow
+    controllers/              --> Request handlers (validate + call service)
+    services/                 --> Database queries (Prisma calls)
+    middlewares/
+      authMiddleware.js       --> JWT verification
+      isAdminMiddleware.js    --> Admin role check
+      errorMiddleware.js      --> Global error handler
+    helpers/
+      geminiApi.js            --> All Gemini AI API calls
+      sendMail.js             --> Nodemailer email sending
+      sendsma.js              --> Twilio WhatsApp OTP
+      generateOTP.js          --> OTP generator
+      sendForgotPasswordEmail.js --> Forgot password email
+      generateJobScorePrompt.js  --> Prompt builder for job scoring
+      generateCompanyEvaluationScore.js --> Prompt builder for company scoring
+      generateJobAboutPrompt.js  --> Prompt for job description generation
+      validateJobDescription.js  --> AI-based spam/abuse validation
+      generateRoleTitle.js       --> AI role title suggestions
+      static_avatar_path.js      --> Default avatar paths
+      WebPushNotification/
+        firebaseAdmin.js         --> Firebase Admin SDK init
+        notificationHelper.js    --> FCM push notification sender
+    jobs/
+      CronJob.js              --> 4 cron jobs (score, expiry, subscription)
+      resetLimitCount.js      --> OTP attempt counter reset
+      companyVerification.js  --> Reserved (empty)
+      generateJobScore.js     --> Job score helper
+      generateCompanyscore.js --> Company score helper
+    socket/
+      socket.js               --> Socket.IO init and event handlers
+    utils/
+      getPagination.js        --> Pagination helper (page/limit/offset)
+      responseHeader.js       --> successResponse / errorResponse builders
+    validations/
+      validateEmail.js        --> Email format validation
+      validatePassword.js     --> Password strength validation
+    seeds/
+      seed.js                 --> DB seed script
+  prisma/
+    schema.prisma             --> All DB models and relations
+    migrations/               --> DB migration history
+  seeds/
+    statecityseeder.js        --> Country/State/City seed data
+  uploads/                    --> Uploaded files (images, resumes, logos)
+  emailMedia/                 --> Email template assets (logo, social icons)
+
+================================================================================
+                     END OF FLOW DOCUMENT
+================================================================================

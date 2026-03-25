@@ -165,7 +165,7 @@ exports.adminPanelLogin = async (req, res) => {
         username: existingAdmin.username,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "4h" }
     );
     const refreshToken = jwt.sign(
       {
@@ -260,7 +260,7 @@ exports.refreshToken = async (req, res) => {
           username: decoded.username,
         },
         process.env.JWT_SECRET,
-        { expiresIn: "1m" }
+      { expiresIn: "4h" }
       );
 
       return successResponse(

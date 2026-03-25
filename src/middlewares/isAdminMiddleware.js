@@ -15,7 +15,7 @@ try {
         }
     });
     if(!admin){
-        return  res.status(404).json({
+        return  res.status(401).json({
             status : false,
             message : "Admin not found",
             code : "INVALID_ADMIN",
