@@ -31,6 +31,8 @@ exports.companyRegistrationStep1 = async (
 ) => {
   
   let result;
+
+  console.log("passowrd is. : ==> " , password)
   if (id) {
     result = await prisma.company.update({
       where: {
