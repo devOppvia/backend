@@ -423,6 +423,7 @@ model Subscription {
   jobDaysActive        Int
   expireDaysPackage    Int
   isDelete             Boolean @default(false)
+  isRecommended        Boolean @default(false)
 
   paymentHistory      PaymentHistory[]
   companySubscription CompanySubscription[]

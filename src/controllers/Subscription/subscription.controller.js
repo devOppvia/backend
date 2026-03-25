@@ -23,6 +23,7 @@ exports.createSubscriptionPlan = async (req, res) => {
       numberOfResumeAccess,
       jobDaysActive,
       expireDaysPackage,
+      isRecommended = false
     } = req.body || {};
 
     if (!packageName) {
@@ -86,6 +87,17 @@ exports.createSubscriptionPlan = async (req, res) => {
       );
     }
 
+    if(isRecommended){
+      await prisma.subscription.updateMany({
+        where: {
+          isRecommended: true,
+        },
+        data: {
+          isRecommended: false,
+        },
+      });
+    }
+
     await prisma.subscription.create({
       data: {
         packageName,
@@ -95,6 +107,7 @@ exports.createSubscriptionPlan = async (req, res) => {
         numberOfResumeAccess,
         jobDaysActive,
         expireDaysPackage,
+        isRecommended
       },
     });
     return successResponse(
@@ -156,6 +169,7 @@ exports.updateSubscriptionPlan = async (req, res) => {
       numberOfResumeAccess,
       jobDaysActive,
       expireDaysPackage,
+      isRecommended = false
     } = req.body || {};
     if (!id) {
       return errorResponse(res, "Subscription id is required", 400);
@@ -210,11 +224,23 @@ exports.updateSubscriptionPlan = async (req, res) => {
       return errorResponse(res, "Package name already exists", 400);
     }
 
+    if(isRecommended){
+      await prisma.subscription.updateMany({
+        where: {
+          isRecommended: true,
+        },
+        data: {
+          isRecommended: false,
+        },
+      });
+    }
+
     await prisma.subscription.update({
       where: {
         id: id,
       },
       data: {
+        isRecommended,
         packageName,
         actualPrice,
         discountedPrice,
@@ -247,9 +273,31 @@ exports.deleteSubscriptionPlan = async (req, res) => {
         id: id,
       },
     });
+    console.log("existingPlan",existingPlan)
     if (!existingPlan) {
       return errorResponse(res, "Subscription plan not found", 400);
     }
+    if(existingPlan.isRecommended){
+      let existingRecommendedPlan = await prisma.subscription.findFirst({
+       where:{
+        NOT:{
+          id:existingPlan.id,
+        }
+       }
+    })
+    if(existingRecommendedPlan){
+      await prisma.subscription.update({
+        where:{
+          id:existingRecommendedPlan.id,
+        },
+        data:{
+          isRecommended:true,
+        }
+      })
+    }
+  }
+
+
     await prisma.subscription.update({
       where: {
         id: id,
