@@ -8,16 +8,16 @@ const SMTP_PORT = process.env.SMTP_PORT;
 
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
+  host: SMTP_HOST,
+  port: SMTP_PORT,
   secure: false,
   auth: {
-    user: "",
-    pass: "",
+    user: SMTP_EMAIL,
+    pass: SMTP_PASSWORD,
   },
-  tls : {
-    rejectUnauthorized : false
-  }
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
 const sendJobStatusMail = async (data) => {
