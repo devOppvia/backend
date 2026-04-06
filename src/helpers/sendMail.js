@@ -1,10 +1,26 @@
 const { JobStatus } = require("@prisma/client");
 const nodemailer = require("nodemailer");
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 const SMTP_EMAIL = process.env.SMTP_EMAIL;
 const SMTP_PASSWORD = process.env.SMTP_PASS;
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT;
+
+  console.log("logs", {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: false,
+    auth: {
+      user: SMTP_EMAIL,
+      pass: SMTP_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
 
 
 const transporter = nodemailer.createTransport({
@@ -21,6 +37,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendJobStatusMail = async (data) => {
+
   try {
     const { email, jobTitle, companyName, jobStatus, reason } = data;
     const statusColor =
