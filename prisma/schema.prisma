@@ -446,6 +446,7 @@ model CandidateManagement {
   job             Job             @relation(fields: [jobId], references: [id])
   intern          Interns         @relation(fields: [internId], references: [id])
   company         Company         @relation(fields: [companyId], references: [id])
+  score           Int             @default(0)
   interview       Interview[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

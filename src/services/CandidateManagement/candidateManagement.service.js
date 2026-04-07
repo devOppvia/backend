@@ -6,6 +6,7 @@ exports.fetchCandidateBasedOnId = async (candidateId) => {
       isDelete: false,
       id: candidateId,
     },
+   
   });
 };
 

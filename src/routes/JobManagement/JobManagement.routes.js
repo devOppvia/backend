@@ -18,4 +18,5 @@ router.post("/generate-job-other-requirements", jobManagementControllers.generat
 router.post("/generate-role-title", jobManagementControllers.generateRoleTitle)
 router.post("/generate-subcategory", jobManagementControllers.generateSubCategory)
 
+
 module.exports = router
