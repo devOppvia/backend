@@ -9,6 +9,7 @@ app.use(
   cors({
     origin: [
       // "http://localhost:3001",
+      "https://talentoppvia.netlify.app",
       "http://192.168.1.64:5173",
       "http://192.168.1.165:5177",
       "http://localhost:3006",
