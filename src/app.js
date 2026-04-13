@@ -9,7 +9,7 @@ app.use(
   cors({
     origin: [
       // "http://localhost:3001",
-      "https://fluffy-narwhal-896187.netlify.app",
+      "https://oppva.netlify.app",
       "http://192.168.1.187:5173",
       "https://talentoppvia.netlify.app",
       "http://192.168.1.64:5173",
