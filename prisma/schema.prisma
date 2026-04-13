@@ -131,6 +131,10 @@ state     State @relation("CurrentState",fields: [stateId], references: [id])
 countryId String
 country   Country @relation(fields: [countryId], references: [id])
 
+// ============= interview ===
+aiInterviews         AIInterview[]
+internSubscriptions  InternSubscription[]
+
 
   // jobCategory             JobCategory?          @relation("InternJobCategories")
   // jobSubCategory          JobSubCategory?       @relation("InternJobSubCategories")
@@ -734,4 +738,166 @@ model Interview {
   updatedAt           DateTime            @updatedAt
 
   @@map(name: "interview")
+}
+
+
+// ==================== ai interview =========================
+
+enum AIInterviewType {
+  COMPANY
+  PRACTICE
+}
+
+enum AIInterviewStatus {
+  SETUP
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum AIInterviewerPreference {
+  MALE
+  FEMALE
+}
+
+enum AIInterviewCategory {
+  BEHAVIORAL
+  TECHNICAL
+  CASE_STUDY
+  SYSTEM_DESIGN
+  CODING_DSA
+  HR_CULTURE_FIT
+  PROJECT_DEEP_DIVE
+  RESUME_BASED
+  DEBUGGING
+  MIXED
+}
+
+enum ExpressionEmotion {
+  CONFIDENT
+  NERVOUS
+  NEUTRAL
+  HAPPY
+  CONFUSED
+}
+
+
+
+
+model InternSubscriptionPlan {
+  id               String   @id @unique @default(uuid())
+  planName         String
+  description      String
+  price            Int
+  discountedPrice  Int
+  interviewCredits Int      // how many AI interviews this plan gives
+  duration         Int      // plan validity in days
+  features         Json
+  isPopular        Boolean  @default(false)
+  isDelete         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  internSubscriptions InternSubscription[]
+
+  @@map(name: "intern_subscription_plans")
+}
+
+model InternSubscription {
+  id                       String   @id @unique @default(uuid())
+  internId                 String
+  planId                   String
+  interviewCreditsTotal    Int
+  interviewCreditsRemaining Int
+  subscriptionStart        DateTime @default(now())
+  subscriptionEnd          DateTime
+  isActive                 Boolean  @default(true)
+  amountPaid               Int
+  razorpay_order_id        String?
+  razorpay_payment_id      String?
+  razorpay_signature       String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  intern Interns                @relation(fields: [internId], references: [id])
+  plan   InternSubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([internId, isActive])
+  @@map(name: "intern_subscriptions")
+}
+
+
+model AIInterview {
+  id                    String                   @id @unique @default(uuid())
+  internId              String
+  type                  AIInterviewType
+  interviewerPreference AIInterviewerPreference  @default(MALE)
+  interviewCategory     AIInterviewCategory      @default(MIXED)
+  identityVerification  Boolean                  @default(false)
+  duration              Int                      // planned duration in mins
+  jobDescription        String?                  // only for COMPANY type
+  companyWebsite        String?                  // only for COMPANY type
+  additionalContext     String?
+  resumeSnapshot        String                   // extracted resume text at session start
+  status                AIInterviewStatus        @default(SETUP)
+
+  // Results — populated on COMPLETE
+  totalQuestions        Int?
+  overallScore          Float?                   // 0-100
+  avgAnswerScore        Float?                   // 0-100
+  starUsed              Int?                     // count of STAR-structured answers
+  topSkill              String?
+  durationActual        Int?                     // actual mins taken
+  confidenceScore       Float?                   // avg from expression snapshots
+  dominantEmotion       String?
+  behaviorSummary       Json?                    // { confident%, nervous%, neutral%, confused% }
+  aiInsights            Json?                    // ["insight1", "insight2", "insight3"]
+  reportPdfPath         String?                  // URL to generated PDF
+
+  startedAt             DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  intern      Interns                @relation(fields: [internId], references: [id])
+  questions   AIInterviewQuestion[]
+  expressions AIInterviewExpression[]
+
+  @@index([internId, status])
+  @@map(name: "ai_interviews")
+}
+
+model AIInterviewQuestion {
+  id             String   @id @unique @default(uuid())
+  aiInterviewId  String
+  questionNumber Int
+  questionText   String
+  answerText     String?
+  answerScore    Float?   // 0-10
+  starUsed       Boolean  @default(false)
+  skillTested    String?
+  aiFeedback     String?
+  answeredAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  aiInterview AIInterview @relation(fields: [aiInterviewId], references: [id])
+
+  @@index([aiInterviewId, questionNumber])
+  @@map(name: "ai_interview_questions")
+}
+
+
+model AIInterviewExpression {
+  id              String            @id @unique @default(uuid())
+  aiInterviewId   String
+  questionId      String?           // which question was being answered at this moment
+  emotion         ExpressionEmotion @default(NEUTRAL)
+  confidenceScore Float             // 0-100
+  timestamp       DateTime
+  createdAt       DateTime          @default(now())
+
+  aiInterview AIInterview @relation(fields: [aiInterviewId], references: [id])
+
+  @@index([aiInterviewId])
+  @@map(name: "ai_interview_expressions")
 }

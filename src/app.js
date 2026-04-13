@@ -9,11 +9,12 @@ app.use(
   cors({
     origin: [
       // "http://localhost:3001",
+      "http://192.168.1.187:5173",
       "https://talentoppvia.netlify.app",
       "http://192.168.1.64:5173",
       "http://192.168.1.165:5177",
       "http://localhost:3006",
-         "http://localhost:5178",
+      "http://localhost:5178",
       "http://localhost:5174",
       "http://192.168.1.165:5177",
       "http://192.168.1.165:3001",
@@ -60,7 +61,7 @@ app.use(
       "Origin",
     ],
     exposedHeaders: ["Set-Cookie"],
-  })
+  }),
 );
 app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
