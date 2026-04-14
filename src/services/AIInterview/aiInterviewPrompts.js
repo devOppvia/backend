@@ -21,6 +21,13 @@ const CATEGORY_GUIDANCE = {
     "Balance behavioral, technical, and situational questions for an all-round assessment. Vary question style each turn.",
 };
 
+const MIXED_ROTATION = {
+  8:  ["RESUME_BASED", "BEHAVIORAL", "HR_CULTURE_FIT", "TECHNICAL", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "CASE_STUDY", "HR_CULTURE_FIT"],
+  12: ["RESUME_BASED", "BEHAVIORAL", "HR_CULTURE_FIT", "TECHNICAL", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "CASE_STUDY", "CODING_DSA", "BEHAVIORAL", "SYSTEM_DESIGN", "DEBUGGING", "HR_CULTURE_FIT"],
+  15: ["RESUME_BASED", "BEHAVIORAL", "HR_CULTURE_FIT", "TECHNICAL", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "CASE_STUDY", "CODING_DSA", "BEHAVIORAL", "SYSTEM_DESIGN", "DEBUGGING", "HR_CULTURE_FIT", "RESUME_BASED", "TECHNICAL", "HR_CULTURE_FIT"],
+  20: ["RESUME_BASED", "BEHAVIORAL", "HR_CULTURE_FIT", "TECHNICAL", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "CASE_STUDY", "CODING_DSA", "BEHAVIORAL", "SYSTEM_DESIGN", "DEBUGGING", "HR_CULTURE_FIT", "RESUME_BASED", "TECHNICAL", "BEHAVIORAL", "PROJECT_DEEP_DIVE", "CASE_STUDY", "SYSTEM_DESIGN", "CODING_DSA", "HR_CULTURE_FIT"],
+};
+
 exports.buildNextQuestionPrompt = (
   interview,
   conversationHistory,
@@ -31,6 +38,15 @@ exports.buildNextQuestionPrompt = (
     CATEGORY_GUIDANCE[interview.interviewCategory] ||
     "Ask relevant interview questions tailored to the candidate's background.";
 
+  let forcedTypeInstruction = "";
+  if (interview.interviewCategory === "MIXED") {
+    const rotation = MIXED_ROTATION[totalQuestions];
+    if (rotation) {
+      const forcedType = rotation[questionNumber - 1];
+      forcedTypeInstruction = `\nFOR THIS QUESTION ONLY — you MUST set "questionType" to exactly: "${forcedType}". Generate a question that fits this type.`;
+    }
+  }
+
   return {
     system: `You are a professional ${interview.interviewerPreference.toLowerCase()} interviewer
 conducting a ${interview.interviewCategory} interview.
@@ -39,7 +55,7 @@ ${interview.additionalContext ? `Additional context: ${interview.additionalConte
 Candidate resume: ${interview.resumeSnapshot}
 This is question ${questionNumber} of ${totalQuestions}.
 
-Interview category guidance: ${categoryGuidance}
+Interview category guidance: ${categoryGuidance}${forcedTypeInstruction}
 
 IMPORTANT RULES:
 - You MUST return ALL 3 fields: "question", "skillTested", "questionType"

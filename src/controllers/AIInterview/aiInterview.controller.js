@@ -16,10 +16,10 @@ const ai = new GoogleGenAI({ });
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const getQuestionCount = (durationMins) => {
-  if (durationMins <= 15) return 5;
-  if (durationMins <= 30) return 8;
-  if (durationMins <= 45) return 12;
-  return 15;
+  if (durationMins == 15) return 8;
+  if (durationMins == 30) return 12;
+  if (durationMins == 45) return 15;
+  if (durationMins == 60) return 20;
 };
 
 // async function callAI(systemPrompt, userPrompt) {
@@ -421,6 +421,53 @@ exports.completeInterview = async (req, res) => {
     }
 
     return successResponse(res, { interviewId: id }, "Interview completed successfully", 200);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+// ─── GET /ai-interview/:id/resume ────────────────────────────────────────────
+
+exports.resumeInterview = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const { id } = req.params;
+
+    const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
+    if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (interview.status !== "IN_PROGRESS")
+      return errorResponse(res, "Interview is not in progress", 400);
+
+    const questions = await aiInterviewService.getQuestionsByInterview(id);
+
+    // The first unanswered question is the one to resume from
+    const currentQuestion = questions.find((q) => !q.answeredAt) || null;
+
+    return successResponse(
+      res,
+      {
+        sessionId: id,
+        totalQuestions: interview.totalQuestions,
+        questions: questions.map((q) => ({
+          id: q.id,
+          order: q.questionNumber,
+          text: q.questionText,
+          tag: q.skillTested || "",
+          isAnswered: !!q.answeredAt,
+        })),
+        currentQuestion: currentQuestion
+          ? {
+              id: currentQuestion.id,
+              order: currentQuestion.questionNumber,
+              text: currentQuestion.questionText,
+              tag: currentQuestion.skillTested || "",
+            }
+          : null,
+      },
+      "Interview resumed",
+      200,
+    );
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);

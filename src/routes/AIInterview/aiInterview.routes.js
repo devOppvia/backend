@@ -11,6 +11,7 @@ router.get("/my/stats", authMiddleware, aiInterviewResultController.getStats);
 // ── Setup & session lifecycle ─────────────────────────────────────────────────
 router.post("/create", authMiddleware, aiInterviewController.createInterview);
 router.post("/:id/start", authMiddleware, aiInterviewController.startInterview);
+router.get("/:id/resume", authMiddleware, aiInterviewController.resumeInterview);
 router.post("/:id/answer", authMiddleware, aiInterviewController.submitAnswer);
 router.post("/:id/complete", authMiddleware, aiInterviewController.completeInterview);
 router.post("/:id/expression", authMiddleware, aiInterviewController.saveExpression);
