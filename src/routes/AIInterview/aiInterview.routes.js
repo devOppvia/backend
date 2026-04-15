@@ -3,7 +3,8 @@ const router = express.Router();
 const authMiddleware = require("../../middlewares/authMiddleware");
 const aiInterviewController = require("../../controllers/AIInterview/aiInterview.controller");
 const aiInterviewResultController = require("../../controllers/AIInterview/aiInterviewResult.controller");
-
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
 // ── History & stats (must come before /:id to avoid param conflicts) ──────────
 router.get("/my/history", authMiddleware, aiInterviewResultController.getHistory);
 router.get("/my/stats", authMiddleware, aiInterviewResultController.getStats);
@@ -23,5 +24,12 @@ router.get("/:id/expressions", authMiddleware, aiInterviewResultController.getEx
 
 // ── Detail (after specific paths) ────────────────────────────────────────────
 router.get("/:id", authMiddleware, aiInterviewResultController.getInterviewDetail);
+
+router.post(
+  "/transcribe",
+  authMiddleware,
+  upload.single("audio"),
+  aiInterviewController.transcribe,
+);
 
 module.exports = router;

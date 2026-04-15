@@ -6,9 +6,16 @@ const { generateInterviewPDF } = require("../../utils/pdfGenerator");
 const prisma = require("../../config/database");
 const { GoogleGenAI } = require("@google/genai");
 const { OpenRouter } = require("@openrouter/sdk");
+require("dotenv").config();
+const fs = require("fs");
+const OpenAI = require("openai");
 
 const openRouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_KEY,
 });
 
 const ai = new GoogleGenAI({ });
@@ -573,3 +580,28 @@ exports.saveExpression = async (req, res) => {
     return errorResponse(res, "Internal server error", 500);
   }
 };
+
+
+exports.transcribe =async(req,res)=> {
+    try {
+      const filePath = req.file.path;
+
+      // 🎤 Whisper transcription
+      const result = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: "gpt-4o-mini-transcribe",
+      });
+
+      const text = result.text;
+
+      console.log("📝 User said:", text);
+
+      // 🧹 delete file
+      fs.unlinkSync(filePath);
+
+      res.json({ text });
+    } catch (err) {
+      console.error("❌ Error:", err);
+      res.status(500).json({ error: "Transcription failed" });
+    }
+}
