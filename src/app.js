@@ -9,6 +9,7 @@ app.use(
   cors({
     origin: [
       // "http://localhost:3001",
+      "http://192.168.1.6:5173",
       "https://testoppvia.vercel.app",
       "https://oppva.netlify.app",
       "http://192.168.1.187:5173",
@@ -72,6 +73,8 @@ app.use(morgan("dev"));
 app.get("/" ,(req,res) => res.send("Hello....."))
 
 app.use("/api/v1", routes);
+
+
 
 app.use(errorMiddleware);
 

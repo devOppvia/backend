@@ -4,6 +4,7 @@ const path = require("path")
 const fs = require("fs")
 const http = require("http")
 const { initSocket} = require("./socket/socket")
+const { startRealtimeServer } = require("./socket/openAirealtime")
 const PORT = process.env.PORT || 8008;
 require("./jobs/companyVerification")
 require("./jobs/CronJob")
@@ -56,6 +57,7 @@ app.get("/api/v1/get-email-templates/:template_path", (req,res)=>{
     }
 })
 
+startRealtimeServer(server);
 
 server.listen(PORT, ()=>{
     console.log(`Server is running on port http://localhost:${PORT}`);
