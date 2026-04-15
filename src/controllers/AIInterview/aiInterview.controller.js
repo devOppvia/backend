@@ -584,6 +584,7 @@ exports.saveExpression = async (req, res) => {
 
 exports.transcribe =async(req,res)=> {
     try {
+      console.log("transcribe ===========>");
       const filePath = req.file.path;
 
       // 🎤 Whisper transcription
