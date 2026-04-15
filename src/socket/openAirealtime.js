@@ -24,6 +24,11 @@ exports.startRealtimeServer = (server) => {
         },
       );
 
+      if (openai.readyState !== WebSocket.OPEN) {
+  console.log("⚠️ OpenAI not connected, skipping audio");
+  return;
+}
+
    openai.on("open", () => {
      console.log("✅ Connected to OpenAI");
 
@@ -70,12 +75,18 @@ exports.startRealtimeServer = (server) => {
     connectOpenAI();
 
     // 🔹 Frontend → OpenAI
-    client.on("message", (data) => {
-        console.log("message from client", data)
-      if (openai?.readyState === WebSocket.OPEN) {
-        openai.send(data);
-      }
-    });
+ client.on("message", (message) => {
+   try {
+     if (!openai || openai.readyState !== WebSocket.OPEN) {
+       console.log("⚠️ OpenAI not connected, skipping audio");
+       return;
+     }
+
+     openai.send(message);
+   } catch (err) {
+     console.error("❌ Failed to forward to OpenAI:", err);
+   }
+ });
 
     // 🔹 Cleanup
     client.on("close", () => {
