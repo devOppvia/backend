@@ -36,60 +36,123 @@ const getQuestionCount = (durationMins) => {
 //   return JSON.parse(cleaned);
 // }
 
+// async function callAI(systemPrompt, userPrompt) {
+//   try {
+//     const combined = `${systemPrompt}\n\nUser: ${userPrompt}`;
+
+//     const response = await fetch(
+//       "https://openrouter.ai/api/v1/chat/completions",
+//       {
+//         method: "POST",
+//         headers: {
+//           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           model: "openai/gpt-4o-mini", // 🔥 SWITCH MODEL (important)
+//           messages: [
+//             {
+//               role: "user",
+//               content: combined,
+//             },
+//           ],
+//           temperature: 0.3,
+//           max_tokens: 500,
+//         }),
+//       },
+//     );
+
+//     const data = await response.json();
+
+//     // ✅ Handle API-level errors FIRST
+//     if (data.error) {
+//       console.error("❌ OpenRouter API Error:", data.error);
+//       throw new Error(data.error.message);
+//     }
+
+//     const text = data?.choices?.[0]?.message?.content;
+
+//     // ✅ Fallback check
+//     if (!text || text.trim() === "") {
+//       console.error(
+//         "❌ Empty AI response FULL:",
+//         JSON.stringify(data, null, 2),
+//       );
+//       throw new Error("Empty AI response");
+//     }
+
+//     console.log("✅ RAW AI:", text); // debug once
+
+//     // Clean markdown
+//     const cleaned = text
+//       .replace(/```json\n?/g, "")
+//       .replace(/```\n?/g, "")
+//       .trim();
+
+//     // Extract JSON safely
+//     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+
+//     if (!jsonMatch) {
+//       console.error("❌ No JSON found:", cleaned);
+//       throw new Error("Invalid JSON format from AI");
+//     }
+
+//     return JSON.parse(jsonMatch[0]);
+//   } catch (error) {
+//     console.error("🔥 OpenRouter Error:", error.message);
+//     throw error;
+//   }
+// }
+
 async function callAI(systemPrompt, userPrompt) {
   try {
-    const combined = `${systemPrompt}\n\nUser: ${userPrompt}`;
-
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-4o-mini", // 🔥 SWITCH MODEL (important)
-          messages: [
-            {
-              role: "user",
-              content: combined,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 500,
-        }),
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_KEY}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        model: "gpt-4o-mini", // ✅ same model (no prefix needed)
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt, // ✅ separated properly
+          },
+          {
+            role: "user",
+            content: userPrompt,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      }),
+    });
 
     const data = await response.json();
 
-    // ✅ Handle API-level errors FIRST
-    if (data.error) {
-      console.error("❌ OpenRouter API Error:", data.error);
-      throw new Error(data.error.message);
+    // ❌ Handle API errors
+    if (!response.ok) {
+      console.error("❌ OpenAI API Error:", data);
+      throw new Error(data?.error?.message || "OpenAI API error");
     }
 
     const text = data?.choices?.[0]?.message?.content;
 
-    // ✅ Fallback check
     if (!text || text.trim() === "") {
-      console.error(
-        "❌ Empty AI response FULL:",
-        JSON.stringify(data, null, 2),
-      );
+      console.error("❌ Empty AI response:", data);
       throw new Error("Empty AI response");
     }
 
-    console.log("✅ RAW AI:", text); // debug once
+    console.log("✅ RAW AI:", text);
 
-    // Clean markdown
+    // 🧹 Clean markdown
     const cleaned = text
       .replace(/```json\n?/g, "")
       .replace(/```\n?/g, "")
       .trim();
 
-    // Extract JSON safely
+    // 🧠 Extract JSON safely
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
@@ -99,10 +162,12 @@ async function callAI(systemPrompt, userPrompt) {
 
     return JSON.parse(jsonMatch[0]);
   } catch (error) {
-    console.error("🔥 OpenRouter Error:", error.message);
+    console.error("🔥 OpenAI Error:", error.message);
     throw error;
   }
 }
+
+
 function buildConversationHistory(questions) {
   return questions
     .filter((q) => q.answeredAt)
