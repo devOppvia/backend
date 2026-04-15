@@ -8,6 +8,7 @@ const { GoogleGenAI } = require("@google/genai");
 const { OpenRouter } = require("@openrouter/sdk");
 require("dotenv").config();
 const fs = require("fs");
+const { execSync } = require("child_process");
 const OpenAI = require("openai");
 
 const openRouter = new OpenRouter({
@@ -582,27 +583,35 @@ exports.saveExpression = async (req, res) => {
 };
 
 
-exports.transcribe =async(req,res)=> {
-    try {
-      console.log("transcribe ===========>");
-      const filePath = req.file.path;
-
-      // 🎤 Whisper transcription
-      const result = await openai.audio.transcriptions.create({
-        file: fs.createReadStream(filePath),
-        model: "gpt-4o-mini-transcribe",
-      });
-
-      const text = result.text;
-
-      console.log("📝 User said:", text);
-
-      // 🧹 delete file
-      fs.unlinkSync(filePath);
-
-      res.json({ text });
-    } catch (err) {
-      console.error("❌ Error:", err);
-      res.status(500).json({ error: "Transcription failed" });
+exports.transcribe = async (req, res) => {
+  try {
+    console.log("transcribe ===========>");
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio file uploaded" });
     }
-}
+
+    const inputPath = req.file.path; // webm file
+    const outputPath = inputPath + ".wav";
+
+    // 🔥 REAL conversion (not rename)
+    execSync(
+      `ffmpeg -i ${inputPath} -ar 16000 -ac 1 -c:a pcm_s16le ${outputPath}`,
+    );
+
+    const result = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(outputPath),
+      model: "gpt-4o-mini-transcribe",
+    });
+
+    const text = result.text;
+
+    // cleanup
+    fs.unlinkSync(inputPath);
+    fs.unlinkSync(outputPath);
+
+    res.json({ text });
+  } catch (err) {
+    console.error("❌ Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
