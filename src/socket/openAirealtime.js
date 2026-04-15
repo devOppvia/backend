@@ -4,11 +4,15 @@ exports.startRealtimeServer = (server) => {
   const wss = new WebSocket.Server({ server });
 
   wss.on("connection", (client) => {
+
+
+
     console.log("🔌 Client connected");
 
   let openai = null;
 
-
+let audioQueue = [];
+let isOpenAIReady = false;
 
     // 🔹 Create OpenAI connection
     const connectOpenAI = () => {
@@ -24,26 +28,31 @@ exports.startRealtimeServer = (server) => {
         },
       );
 
-      if (openai.readyState !== WebSocket.OPEN) {
-  console.log("⚠️ OpenAI not connected, skipping audio");
-  return;
-}
+//       if (openai.readyState !== WebSocket.OPEN) {
+//   console.log("⚠️ OpenAI not connected, skipping audio");
+//   return;
+// }
 
-   openai.on("open", () => {
-     console.log("✅ Connected to OpenAI");
+ openai.on("open", () => {
+  console.log("✅ Connected to OpenAI");
+  isOpenAIReady = true;
 
-     openai.send(
-       JSON.stringify({
-         type: "session.update",
-         session: {
-           modalities: ["text"],
-           input_audio_format: "pcm16",
-           output_audio_format: "pcm16",
-           turn_detection: { type: "server_vad" },
-         },
-       }),
-     );
-   });;
+  openai.send(
+    JSON.stringify({
+      type: "session.update",
+      session: {
+        modalities: ["audio", "text"],
+        input_audio_format: "pcm16",
+        output_audio_format: "pcm16",
+        turn_detection: { type: "server_vad" },
+      },
+    }),
+  );
+
+  // ✅ Flush queued messages
+  audioQueue.forEach((msg) => openai.send(msg));
+  audioQueue = [];
+});;
 
     openai.on("message", (msg) => {
       try {
@@ -75,18 +84,19 @@ exports.startRealtimeServer = (server) => {
     connectOpenAI();
 
     // 🔹 Frontend → OpenAI
- client.on("message", (message) => {
-   try {
-     if (!openai || openai.readyState !== WebSocket.OPEN) {
-       console.log("⚠️ OpenAI not connected, skipping audio");
-       return;
-     }
+client.on("message", (message) => {
+  try {
+    if (!openai || openai.readyState !== WebSocket.OPEN) {
+      console.log("⏳ Queueing audio...");
+      audioQueue.push(message);
+      return;
+    }
 
-     openai.send(message);
-   } catch (err) {
-     console.error("❌ Failed to forward to OpenAI:", err);
-   }
- });
+    openai.send(message);
+  } catch (err) {
+    console.error("❌ Failed to forward to OpenAI:", err);
+  }
+});
 
     // 🔹 Cleanup
     client.on("close", () => {
