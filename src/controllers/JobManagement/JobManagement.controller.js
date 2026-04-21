@@ -8,13 +8,13 @@ const jobSubCategoryServices = require("../../services/JobSubCategory/jobSubCate
 const companyRegistrationServices = require("../../services/CompanyAuth/companyAuth.service");
 const axios = require("axios");
 const validator = require("validator");
-const { generateJobPrompt, generateJobOtherRequirementsPrompt } = require("../../helpers/generateJobAboutPrompt");
+const { generateJobPrompt, generateJobOtherRequirementsPrompt, generateSubCategoryPrompt, generateRoleTitlePrompt } = require("../../helpers/generateJobAboutPrompt");
 const { sendJobStatusMail } = require("../../helpers/sendMail");
 const {
   sendWebPushNotification,
 } = require("../../helpers/WebPushNotification/notificationHelper");
 const prisma = require("../../config/database");
-const { generateJobTitles, generateJobText, generateSubCategory } = require("../../helpers/generateRoleTitle");
+const { generateJobAboutAI, generateJobTitlesApi, generateJobOtherRequirementsAI, generateJobSubCategoryAI } = require("../../helpers/openAi");
 
 exports.submitJobOpening = async (req, res) => {
   try {
@@ -39,7 +39,9 @@ exports.submitJobOpening = async (req, res) => {
       maxStipend,
       subscriptionId,
       applicationType = "INTERNSHIP",
-      experience
+      experience,
+      aiCall,
+    
     } = req.body || {};
     if (!companyId) {
       return errorResponse(res, "Company Id is required", 400);
@@ -180,6 +182,19 @@ exports.submitJobOpening = async (req, res) => {
         return errorResponse(res, "Please enter valid subscription id", 400);
       }
     }
+    if(aiCall){
+      if(aiCall.enable && !aiCall.questions){
+        return errorResponse(res, "AI Call questions are required", 400)
+      }
+      if(aiCall.enable && !Array.isArray(aiCall.questions)){
+        return errorResponse(res, "AI Call questions are in array format", 400)
+      }
+      if(aiCall.enable && aiCall.questions.length === 0){
+        return errorResponse(res, "AI Call questions are required", 400)
+      }
+      
+      }
+    
     await jobManagementServices.submitJobOpening(req.body);
     return successResponse(res, {}, "Job Submitted For the review");
   } catch (error) {
@@ -763,7 +778,7 @@ exports.generateJobAbout = async (req, res) => {
     let prompt = generateJobPrompt(body);
     
     // let description = await jobManagementServices.generateJobAbout(prompt);
-    let description = await generateJobText(prompt)
+    let description = await generateJobAboutAI(prompt);
 
     return successResponse(
       res,
@@ -880,7 +895,7 @@ exports.generateJobOtherRequirements = async (req, res) => {
     let prompt = generateJobOtherRequirementsPrompt(body);
     
     // let description = await jobManagementServices.generateJobAbout(prompt);
-    let description = await generateJobText(prompt)
+    let description = await generateJobOtherRequirementsAI(prompt);
 
     return successResponse(
       res,
@@ -952,50 +967,6 @@ exports.updateJobBulkStatusUpdate = async (req, res) => {
   }
 };
 
-exports.generateRoleTitle = async (req, res)=>{
-  try {
-    let { category, subCategory ,applicationType} = req.body || {}
-    if(!category){
-      return errorResponse(res, "Category is required", 400)
-    }
-    if(!subCategory){
-      return errorResponse(res, "SubCategory is required", 400)
-    }
-    // if(!validator.isUUID(category)){
-    //   return errorResponse(res, "Invalid industry id format", 400)
-    // }
-    // if(!validator.isUUID(subCategory)){
-    //   return errorResponse(res, "Invalid department id format", 400)
-    // }
-    if(!applicationType){
-      return errorResponse(res, "Type is required", 400)
-    }
-  //   let existingIndustry = await prisma.jobCategory.findFirst({
-  //     where : {
-  //       categoryName : category
-  //     },
-  //     select : {
-  // categoryName: true,
-  //     }
-  //   })
-  //   let existingDepartment = await prisma.jobSubCategory.findFirst({
-  //     where : {
-  //       subCategoryName : subCategory
-  //     },
-  //     select : {
-  //       subCategoryName : true
-  //     }
-  //   })
-    // let { categoryName } = existingIndustry || {}
-    // let { subCategoryName } = existingDepartment || {}
-    let response = await generateJobTitles(category, subCategory , applicationType)
-    
-    return successResponse(res, response, "Role titles generated successfully", {}, 200)
-  } catch (error) {
-    console.error(error);
-    return errorResponse(res, "Internal server error", 500)
-  }
-}
 
 
 exports.generateRoleTitle = async (req, res)=>{
@@ -1005,8 +976,16 @@ exports.generateRoleTitle = async (req, res)=>{
       return errorResponse(res, "Category is required", 400)
     }
 
+  let prompt = await generateRoleTitlePrompt(
+    category,
+    subCategory,
+    applicationType,
+  );
 
-    let response = await generateJobTitles(category, subCategory , applicationType)
+  console.log("prompt ==>", prompt);
+  
+
+    let response = await generateJobTitlesApi(prompt);
     
     return successResponse(res, response, "Role titles generated successfully", {}, 200)
   } catch (error) {
@@ -1027,11 +1006,17 @@ exports.generateSubCategory = async (req, res)=>{
         id : category
       },
     })
+
+    let existingSubCategory = await prisma.jobSubCategory.findFirst({
+      where : {
+        jobCategoryId : category
+      },
+    })
     
         
+  const prompt = generateSubCategoryPrompt(existingCategory.categoryName , existingSubCategory.subCategoryName)
 
-
-    let response = await generateSubCategory(existingCategory.categoryName)
+    let response = await generateJobSubCategoryAI(prompt);
     
     return successResponse(res, response, "Sub category generated successfully", {}, 200)
   } catch (error) {

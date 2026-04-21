@@ -10,8 +10,8 @@ const validator = require("validator");
 const {
   generateSkillsPrompt,
 } = require("../../helpers/generateJobAboutPrompt");
-const { GenerateNewSkills } = require("../../helpers/geminiApi");
 const prisma = require("../../config/database");
+const { generateSkillsAI } = require("../../helpers/openAi");
 exports.createSkill = async (req, res) => {
   try {
     let { skillName, jobCategoryId, jobSubCategoryId } = req.body || {};
@@ -51,7 +51,7 @@ exports.createSkill = async (req, res) => {
 
     const nameRegex = /^[^\x00-\x1F\x7F]+$/;
 
-    // Validate each skill name
+    // Validate each skill name up front
     for (const singleSkill of skillName) {
       const trimmed = singleSkill.trim();
       if (!nameRegex.test(trimmed)) {
@@ -61,7 +61,7 @@ exports.createSkill = async (req, res) => {
           400
         );
       }
-      if (trimmed.length > 20) {
+      if (trimmed.length > 30) {
         return errorResponse(
           res,
           `Skill name must not exceed 20 characters`,
@@ -70,17 +70,19 @@ exports.createSkill = async (req, res) => {
       }
     }
 
-    // Fetch all active skills once for space-based & case-insensitive duplicate check
+    // Fetch active and deleted skills once for duplicate/restore checks
     const activeSkills = await prisma.skills.findMany({
       where: { isDelete: false },
       select: { skillName: true },
     });
 
-    // Fetch all deleted skills once for restoration check
     const deletedSkills = await prisma.skills.findMany({
       where: { isDelete: true },
       select: { id: true, skillName: true },
     });
+
+    let createdCount = 0;
+    let skippedCount = 0;
 
     for (const singleSkill of skillName) {
       const trimmed = singleSkill.trim();
@@ -91,7 +93,8 @@ exports.createSkill = async (req, res) => {
       );
 
       if (isDuplicate) {
-        return errorResponse(res, `Skill "${trimmed}" already exists`, 400);
+        skippedCount++;
+        continue;
       }
 
       const deletedMatch = deletedSkills.find(
@@ -106,8 +109,14 @@ exports.createSkill = async (req, res) => {
       } else {
         await skillsServices.createSkill(trimmed, jobCategoryId, jobSubCategoryId);
       }
+      createdCount++;
     }
-    return successResponse(res, {}, "Skill created successfully", 200);
+
+    if (createdCount === 0 && skippedCount > 0) {
+      return errorResponse(res, "All selected skills already exist", 400);
+    }
+
+    return successResponse(res, {}, "Skills created successfully", 200);
   } catch (error) {
     console.error("ERROR ::", error);
 
@@ -238,10 +247,10 @@ exports.updateSkill = async (req, res) => {
         400
       );
     }
-    if (skillName.length > 20) {
+    if (skillName.length > 30) {
       return errorResponse(
         res,
-        "Skill name must not exceed 20 characters",
+        "Skill name must not exceed 30 characters",
         400
       );
     }
@@ -416,24 +425,16 @@ exports.generateNewSkillsUsingAi = async (req, res) => {
       subCategoryName,
       skills
     );
-    let newSkills = await GenerateNewSkills(prompt);
-    function cleanJsonOutput(text) {
-      return text.replace(/```json|```/g, "").trim();
-    }
-    try {
-      let cleanOutPut = cleanJsonOutput(newSkills);
-      let skillsArray = JSON.parse(cleanOutPut);
+    let newSkills = await generateSkillsAI(prompt);
+ 
       return successResponse(
         res,
-        skillsArray,
+        newSkills,
         "Skills generated successfully",
         {},
-        200
+        200,
       );
-    } catch (error) {
-      console.error(error);
-      return errorResponse(res, "No suggetions", 400);
-    }
+    
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);

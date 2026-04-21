@@ -12,6 +12,9 @@ router.put("/update-job-details/:jobId", jobManagementControllers.updateJobDetai
 router.delete("/delete-job/:jobId", jobManagementControllers.deleteJobDetailsByCompanys)
 router.get("/get-company-locations/:companyId", jobManagementControllers.getCompanyLocations)
 router.put("/update-bulk-status", jobManagementControllers.updateJobBulkStatusUpdate)
+
+
+
 router.post("/generate-job-about", jobManagementControllers.generateJobAbout)
 router.post("/generate-job-other-requirements", jobManagementControllers.generateJobOtherRequirements)
 

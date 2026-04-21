@@ -6,10 +6,10 @@ const http = require("http")
 const { initSocket} = require("./socket/socket")
 const { startRealtimeServer } = require("./socket/openAirealtime")
 const PORT = process.env.PORT || 8008;
-require("./jobs/companyVerification")
+// require("./jobs/companyVerification")
 require("./jobs/CronJob")
 require("./jobs/resetLimitCount")
-
+require("./jobs/aiCallRetry.job");
 const server = http.createServer(app)
 initSocket(server)
 

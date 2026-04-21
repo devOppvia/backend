@@ -32,7 +32,8 @@ const internRegistrationRoutes = require("./InternRegistrationV5/internRegistrat
 const interviewRoutes = require("./Internview/interview.routes")
 const aiInterviewRoutes = require("./AIInterview/aiInterview.routes")
 const internSubscriptionRoutes = require("./InternSubscription/internSubscription.routes")
-
+const aiCallRoutes = require("./AICall/aiCall.routes");
+    
 
 router.use("/interview", interviewRoutes)
 router.use("/ai-interview", aiInterviewRoutes)
@@ -65,5 +66,6 @@ router.use("/intern",internAuthRoutes)
 router.use("/company-auth", companyAuthRoutes)
 router.use("/location", locationRoutes)
 router.use("/notification", notificationRoutes)
+router.use("/ai-call", aiCallRoutes);
 
 module.exports = router

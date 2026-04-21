@@ -9,7 +9,7 @@ const { OpenRouter } = require("@openrouter/sdk");
 require("dotenv").config();
 const fs = require("fs");
 const { execSync } = require("child_process");
-const OpenAI = require("openai");
+  const OpenAI = require("openai");
 
 const openRouter = new OpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -30,19 +30,8 @@ const getQuestionCount = (durationMins) => {
   if (durationMins == 60) return 20;
 };
 
-// async function callAI(systemPrompt, userPrompt) {
-//   const combined = `${systemPrompt}\n\nUser: ${userPrompt}`;
-//   const response = await ai.models.generateContent({
-//     model: "gemini-3-flash-preview",
-//     contents: combined,
-//   });
 
-  
-//   const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-//   // Strip markdown code fences if present
-//   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-//   return JSON.parse(cleaned);
-// }
+
 
 // async function callAI(systemPrompt, userPrompt) {
 //   try {
@@ -175,6 +164,34 @@ async function callAI(systemPrompt, userPrompt) {
   }
 }
 
+
+async function isRepeatRequest(spokenText, questionText) {
+  if (!spokenText || spokenText.trim().length === 0) return false;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    max_tokens: 1,
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are classifying a voice response in an interview. " +
+          "Reply with exactly one word: REPEAT or ANSWER. " +
+          "Reply REPEAT if the person is asking to hear the question again " +
+          "(e.g. 'repeat', 'say again', 'what?', 'huh?', 'sorry?', 'I didn't hear', 'pardon', 'could you repeat'). " +
+          "Reply ANSWER if the person is actually answering the question, even if briefly.",
+      },
+      {
+        role: "user",
+        content: `Interview question: "${questionText}"\nCandidate said: "${spokenText}"\nClassify:`,
+      },
+    ],
+  });
+
+  const verdict = response.choices[0]?.message?.content?.trim().toUpperCase();
+  return verdict === "REPEAT";
+}
 
 function buildConversationHistory(questions) {
   return questions
@@ -313,6 +330,24 @@ exports.submitAnswer = async (req, res) => {
       return errorResponse(res, "Question not found", 404);
     if (question.answeredAt)
       return errorResponse(res, "Question already answered", 400);
+
+    // If candidate asked to repeat, return same question without storing
+    const wantsRepeat = await isRepeatRequest(answerText, question.questionText);
+    if (wantsRepeat) {
+      return successResponse(
+        res,
+        {
+          isRepeat: true,
+          question: {
+            id: question.id,
+            questionNumber: question.questionNumber,
+            questionText: question.questionText,
+          },
+        },
+        "Please listen to the question again",
+        200,
+      );
+    }
 
     // Score the answer
     const scoringPrompt = prompts.buildAnswerScoringPrompt(

@@ -1,16 +1,10 @@
 const { CronJob } = require("cron");
 const prisma = require("../config/database");
-const {
-  generateJobEvaluationPrompt,
-} = require("../helpers/generateJobScorePrompt");
-const {
-  GenerateJobScoreDetails,
-  GenerateCompanyScore,
-} = require("../helpers/geminiApi");
-const {
-  generateCompanyEvaluationPrompt,
-} = require("../helpers/generateCompanyEvaluationScore");
+
+
 const validateJobDescription = require("../helpers/validateJobDescription");
+const { generateJobAboutAI, generateJobScoreAI, generateCompanyScoreAI } = require("../helpers/openAi");
+const { generateJobEvaluationPrompt, generateCompanyEvaluationPrompt } = require("../helpers/generateJobAboutPrompt");
 
 async function getPendingJobs() {
   return await prisma.job.findMany({
@@ -71,7 +65,6 @@ async function generateJobScore() {
         aboutJob: true,
         otherRequirements: true,
         numberOfOpenings: true,
-        location: true,
         stipend: true,
         minStipend: true,
         maxStipend: true,
@@ -109,20 +102,19 @@ async function generateJobScore() {
         return;
       }
       let prompt = await generateJobEvaluationPrompt(pendingJobs);
-      score = await GenerateJobScoreDetails(prompt);
+      score = await generateJobScoreAI(prompt);
       await prisma.job.update({
         where: {
           id: pendingJobs.id,
         },
         data: {
-          score: score,
+          score: Number(score),
         },
       });
     }
-
     return score;
   } catch (error) {
-    console.error(error);
+    console.error("generateJobScore error==>", error);
   }
 }
 
@@ -139,14 +131,14 @@ async function generateCompanyScore() {
     let score;
     if (pendingCompanies) {
       let prompt = await generateCompanyEvaluationPrompt(pendingCompanies);
-      score = await GenerateCompanyScore(prompt);
-      if (score.success) {
+      score = await generateCompanyScoreAI(prompt);
+      if (score) {
         await prisma.company.update({
           where: {
             id: pendingCompanies.id,
           },
           data: {
-            AiScore: score.score,
+            AiScore: Number(score),
           },
         });
       }
@@ -321,9 +313,9 @@ async function getJobPostingExpired() {
 
 const job1 = new CronJob("*/30 * * * * *", async () => {
   try {
-    // await generateJobScore();
+    await generateJobScore();
     await generateCompanyScore();
-        console.log("company score crone ====>");
+        // console.log("company score crone ====>");
 
   } catch (error) {
     console.error("Error fetching pending jobs:", error);
@@ -331,7 +323,7 @@ const job1 = new CronJob("*/30 * * * * *", async () => {
 });
 const job2 = new CronJob("*/30 * * * * *", async () => {
   try {
-    console.log("subscription crone ====>");
+    // console.log("subscription crone ====>");
 
     // await generateJobScore();
     await getExpiredSubscriptions();
@@ -343,7 +335,7 @@ const job2 = new CronJob("*/30 * * * * *", async () => {
 const job3 = new CronJob("*/30 * * * * *", async () => {
   try {
     // await generateJobScore();
-        console.log("expire job crone ====>");
+        // console.log("expire job crone ====>");
 
     await getExpiredJobs();
   
@@ -354,7 +346,7 @@ const job3 = new CronJob("*/30 * * * * *", async () => {
 const job4 = new CronJob("*/30 * * * * *", async () => {
   try {
     // await generateJobScore();
-      console.log("job posting expire  crone ====>");
+      // console.log("job posting expire  crone ====>");
 
     await getJobPostingExpired();
   } catch (error) {

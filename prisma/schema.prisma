@@ -1,4 +1,4 @@
-generator client {
+  generator client {
   provider = "prisma-client-js"
 }
 
@@ -141,6 +141,10 @@ internSubscriptions  InternSubscription[]
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 
+
+
+  aiCalls AICall[]
+
   @@index([email, isDelete, id, applicationType, isProfileComplate, isOpenToWork, isResumeActive, isResumeDeleted, industry, internStatus, internshipType])
   @@map(name: "interns")
 }
@@ -238,6 +242,12 @@ model Company {
   companyIndustry       JobCategory?            @relation(fields: [industryType], references: [id])
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
+
+
+
+    aiCallQuestions AICallQuestion[]
+  aiCalls         AICall[]
+
 
   @@map(name: "companies")
 }
@@ -389,6 +399,12 @@ model Job {
   employmentType          WorkMode              @default(ANY)
 
 
+  callEnable         Boolean               @default(false)
+  callConditionScore Int                   @default(0)
+  aiCallQuestions AICallQuestion[]
+  aiCalls         AICall[]
+
+
 
   @@index([companyId, jobStatus, isDelete])
   @@index([jobStatus, isDelete])
@@ -457,6 +473,8 @@ model CandidateManagement {
   interview       Interview[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+    aiCalls AICall[]
 
   @@index([internId, jobId, companyId, isDelete])
   @@index([internId, jobId, companyId])
@@ -900,4 +918,93 @@ model AIInterviewExpression {
 
   @@index([aiInterviewId])
   @@map(name: "ai_interview_expressions")
+}
+
+
+// ai Call =======================
+
+enum AICallStatus {
+  PENDING                 // waiting for nextCallAt
+  CALLING                 // cron picked it up, actively dialing
+  COMPLETED               // intern answered and finished the interview
+  ALL_ATTEMPTS_EXHAUSTED  // 3 attempts made, none answered/completed
+  FAILED                  // unexpected system error
+}
+
+enum AICallAttemptStatus {
+  IN_PROGRESS         // call is live right now
+  NOT_ANSWERED        // rang out, intern didn't pick up
+  ANSWERED_COMPLETED  // picked up + finished all questions
+  ANSWERED_DROPPED    // picked up but hung up before completing
+  MACHINE_DETECTED    // voicemail/answering machine detected
+  FAILED              // Twilio/technical error
+}
+
+model AICallQuestion {
+  id        String   @id @unique @default(uuid())
+  companyId String
+  jobId     String?
+  question  String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  audioUrl  String?
+  company   Company  @relation(fields: [companyId], references: [id])
+  job       Job?     @relation(fields: [jobId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, jobId, isActive])
+  @@map(name: "ai_call_questions")
+}
+
+model AICall {
+  id                    String       @id @unique @default(uuid())
+  internId              String
+  jobId                 String
+  companyId             String
+  candidateManagementId String
+  status                AICallStatus @default(PENDING)
+  attemptNumber         Int          @default(0)
+  nextCallAt            DateTime?
+  allAttemptsExhausted  Boolean      @default(false)  // denormalized from status for composite index; always set together with status
+  triggerScore          Float
+  transcript            Json?
+  callScore             Float?
+  callSummary           String?
+
+  intern              Interns             @relation(fields: [internId], references: [id])
+  company             Company             @relation(fields: [companyId], references: [id])
+  job                 Job                 @relation(fields: [jobId], references: [id])
+  candidateManagement CandidateManagement @relation(fields: [candidateManagementId], references: [id])
+  attempts            AICallAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([internId, status])
+  @@index([companyId, status])
+  @@index([candidateManagementId])
+  @@index([nextCallAt, allAttemptsExhausted, status])
+  @@map(name: "ai_calls")
+}
+
+model AICallAttempt {
+  id            String              @id @unique @default(uuid())
+  aiCallId      String
+  attemptNumber Int
+  callSid       String?
+  status        AICallAttemptStatus @default(IN_PROGRESS)
+  duration      Int?
+  scheduledAt   DateTime
+  answeredAt    DateTime?
+  failReason    String?
+
+  aiCall    AICall   @relation(fields: [aiCallId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([aiCallId, attemptNumber])
+  @@index([aiCallId])
+  @@index([callSid])
+  @@map(name: "ai_call_attempts")
 }

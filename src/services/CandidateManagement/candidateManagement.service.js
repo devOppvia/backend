@@ -125,6 +125,8 @@ exports.getAppliedCandidatesForCompany = async (
         select: {
           jobTitle: true,
           aboutJob: true,
+          callEnable : true,
+          callConditionScore : true,
           jobCategory: {
             select: {
               id: true,
@@ -156,6 +158,7 @@ exports.getAppliedCandidatesForCompany = async (
       score: true,
       isScored: true,
       scoredReason: true,
+      aiCalls :  true
     },
   });
 };

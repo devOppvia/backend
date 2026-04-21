@@ -121,7 +121,7 @@ exports.getRegisteredCompaniesBasedOnStatus = async (req, res) => {
 
           // ✅ FIX HERE
           industryType: true,
-
+         AiScore:true,
           companySize: true,
           companyIntro: true,
           foundedYear: true,
@@ -144,8 +144,7 @@ exports.getRegisteredCompaniesBasedOnStatus = async (req, res) => {
           updatedAt: true,
         },
       });
-
-      const industryIds = companies.map(c => c.industryType);
+      const industryIds = companies.map(c => c?.industryType ? c.industryType : "");
 
 const industries = await prisma.jobCategory.findMany({
   where: {

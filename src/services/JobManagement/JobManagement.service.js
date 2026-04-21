@@ -1,6 +1,6 @@
 const prisma = require("../../config/database");
 const { getPagination, getPagingData } = require("../../utils/getPagination");
-const { callGeminiAPI } = require("../../helpers/geminiApi");
+const { generateJobAboutAI } = require("../../helpers/openAi");
 
 exports.fetcheJobBasedOnId = async (jobId) => {
   return await prisma.job.findUnique({
@@ -42,7 +42,8 @@ exports.submitJobOpening = async (data) => {
     applicationType,
     experience,
     city,
-    state
+    state,
+    aiCall
   } = data || {};
   minStipend = parseInt(minStipend);
   maxStipend = parseInt(maxStipend);
@@ -92,9 +93,9 @@ exports.submitJobOpening = async (data) => {
     }
   }) 
 
-  
+  console.log("creating job... ==> " , aiCall)
 
-  return await prisma.job.create({
+  const job = await prisma.job.create({
     data: {
       companyId: companyId,
       jobTitle: jobTitle,
@@ -118,15 +119,42 @@ exports.submitJobOpening = async (data) => {
       jobDaysActive : jobDaysActive,
       resumeAccessCredits : resumeAccessCredits,
       experience : applicationType === "JOB" ? experience : null,
-     cities: {
-      connect: { id: getCity.id }
-    },
-
-    states: {
-      connect: { id: getState.id }
-    }
+      callEnable : aiCall.enabled,
+      callConditionScore : aiCall.callMode === "SCORE" ? aiCall.minScore : 0,
+      cities: {
+       connect: { id: getCity.id }
+      },
+      states: {
+       connect: { id: getState.id }
+      }
     },
   });
+
+  console.log("job created ========> " , job.id)
+
+
+
+
+
+  await prisma.job.update({
+    where: {
+      id: job.id,
+    },
+    data: {
+      aiCallQuestions: {
+        createMany: {
+          data: aiCall.questions.map((question, index) => {
+          return {
+            question: question,
+            order: index + 1,
+            isActive: true,
+            companyId: companyId,
+          };
+        }),
+      },
+    },
+  }});
+  return job
 };
 
 exports.getJobsBasedOnStatus = async (
@@ -423,7 +451,7 @@ exports.getCompanyLocations = async (companyId) => {
 
 exports.generateJobAbout = async (prompt) => {
   try {
-    return (response = callGeminiAPI(prompt));
+    return (response = generateJobAboutAI(prompt));
   } catch (error) {
     console.error(error);
     return;

@@ -8,8 +8,8 @@ const validator = require("validator");
 const {
   generateSubCategoryPrompt,
 } = require("../../helpers/generateJobAboutPrompt");
-const { GenerateNewJobSubCategory } = require("../../helpers/geminiApi");
 const prisma = require("../../config/database");
+const { generateJobSubCategoryAI } = require("../../helpers/openAi");
 
 exports.createJobSubCategory = async (req, res) => {
   try {
@@ -389,7 +389,7 @@ exports.generateSubCategoriesFromAi = async (req, res) => {
     let generatedSubCategories;
 
     try {
-      generatedSubCategories = await GenerateNewJobSubCategory(prompt);
+      generatedSubCategories = await generateJobSubCategoryAI(prompt);
       function cleanJsonOutput(text) {
         return text.replace(/```json|```/g, "").trim();
       }
@@ -413,7 +413,7 @@ exports.generateSubCategoriesFromAi = async (req, res) => {
         200
       );
     } catch (error) {
-      console.error("Gemini API Error:", error.message);
+      console.error("open ai  API Error:", error.message);
 
       return errorResponse(
         res,

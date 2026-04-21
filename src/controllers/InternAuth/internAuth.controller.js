@@ -11,12 +11,11 @@ const {
   sendForgotPasswordEmailIntern,
 } = require("../../helpers/sendForgotPasswordEmail");
 const { sendEmailOtp } = require("../../helpers/sendMail");
-const { string } = require("joi");
 const getAvatarPath = require("../../helpers/static_avatar_path");
-const { callGeminiAPI } = require("../../helpers/geminiApi");
-const { generateJobText, generateInternAboutUs } = require("../../helpers/generateRoleTitle");
 const { generateOTP } = require("../../helpers/generateOTP");
 const sendWhatsAppOTP = require("../../helpers/sendsma");
+const { generateInternAboutUsPrompt } = require("../../helpers/generateJobAboutPrompt");
+const { generateInternAboutAI } = require("../../helpers/openAi");
 
 exports.InternRegistrationStep1 = async (req, res) => {
   try {
@@ -2166,7 +2165,7 @@ exports.verifyNewMobileAndUpdateMobile = async (req, res) => {
 
 exports.generateAboutUs = async (req, res) => {
   try {
-    const { description } = req.body || {};
+    const {internData ,  description } = req.body || {};
 
     if (!description) {
       return errorResponse(res, "Description is required", 400);
@@ -2180,29 +2179,19 @@ exports.generateAboutUs = async (req, res) => {
         400,
       );
     }
-    if (wordCount > 100) {
-      return errorResponse(
-        res,
-        "Description is too long, please keep it under 100 words",
-        400,
-      );
-    }
+    // if (wordCount > 100) {
+    //   return errorResponse(
+    //     res,
+    //     "Description is too long, please keep it under 100 words",
+    //     400,
+    //   );
+    // }
 
-    const prompt = `
-      Reference the following short description: "${description}"
-      
-      Task:
-      Refine this description into a professional "About Us" or "Professional Summary" for an intern's profile.
-      The output should be:
-      - Professional, engaging, and concise (approx. 50-80 words).
-      - Written in the first person.
-      - Focused on strengths, aspirations, and value proposition.
-      - Suitable for a career portal.
-      
-      Output only the refined text, no additional commentary or labels.
-    `;
+    const prompt = generateInternAboutUsPrompt(internData , description);
 
-    const refinedAbout = await generateInternAboutUs(prompt);
+    console.log("prompt === > " ,prompt)
+
+    const refinedAbout = await generateInternAboutAI(prompt);
 
     return successResponse(res, { refinedAbout }, {}, 200);
   } catch (error) {

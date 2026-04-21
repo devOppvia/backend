@@ -3,6 +3,16 @@
  * @param {Object} jobData - Internship form data
  * @returns {string}
  */
+
+function generateRoleTitlePrompt(industry, department, type) {
+  return `Generate exactly 5 ${type} titles for the following:
+Industry: ${industry}
+Department: ${department}
+
+Return ONLY a JSON array of 5 ${type} titles, nothing else. No explanations, no markdown, just the array.
+Format: ["Title 1", "Title 2", "Title 3", "Title 4", "Title 5"]`;
+}
+
 function generateJobPrompt(jobData) {
   const {
     positionTitle = "",
@@ -41,9 +51,10 @@ function generateJobPrompt(jobData) {
     - Learning opportunities, mentorship, and skill development
     - Why this internship will be valuable for career growth
     - Encourage motivated students or fresh graduates to apply
+
+    note not add markdown like ** and other, length of content is only 800 characters including spaces
     `;
 }
-
 
 function generateJobOtherRequirementsPrompt(jobData) {
   const {
@@ -78,30 +89,30 @@ function generateJobOtherRequirementsPrompt(jobData) {
     ${benefits ? `Additional Benefits: ${benefits}` : ""}
   
     Write 150-200 words with:
+    not add markdown like ** and other, length of content is only 800 characters including spaces
    
     `;
 }
 
-
-
-function generateInternAboutUsPrompt(internData) {
+function generateInternAboutUsPrompt(internData , description) {
  
 
-  return `Create a professional internship job other requirements text for:
+  return `Create a professional intern about text for:
   
-     inter about :${internData}
+     inter data :${JSON.stringify(internData)}
+
+     intern written about : ${description}
+      
+
   
     Write 70-150 words with:
+    note do not pass markdown like ** and other, length of content is only 400 characters including spaces
    
     `;
   
     
 }
     
-
-
-
-
 function generateCategoryPrompt(existingCategories, userInput) {
   return `
 You are helping to create unique job category names for an Oppvia portal.
@@ -118,7 +129,6 @@ Rules:
 - Do not include explanations or extra text.
 `;
 }
-
 
 function generateSubCategoryPrompt(parentCategory, existingSubCategories) {
   return `
@@ -177,6 +187,155 @@ Output format:
 `;
 }
 
+function generateJobEvaluationPrompt(jobData) {
+  const {
+    jobTitle,
+    internshipDuration,
+    workingHours,
+    skills,
+    aboutJob,
+    otherRequirements,
+    numberOfOpenings,
+    location,
+    stipend,
+    minStipend,
+    maxStipend,
+    additionalBenefits,
+    jobType,
+    jobCategory,
+    jobSubCategory,
+  } = jobData || {};
+
+  return `
+  You are a job evaluator. 
+  Based on the following internship job details, give a score between 0 and 10 
+  where 0 means completely unqualified and 10 means excellent and ready for approval.
+  Only return the number, no explanation.
+  
+  Job Details:
+  Job Title: ${jobTitle || "N/A"}
+  Internship Duration: ${internshipDuration || "N/A"}
+  Working Hours: ${workingHours || "N/A"}
+  Skills: ${skills && skills.length ? skills.join(", ") : "N/A"}
+  About Job: ${aboutJob || "N/A"}
+  Other Requirements: ${otherRequirements || "N/A"}
+  Number of Openings: ${numberOfOpenings || "N/A"}
+  Location: ${location || "N/A"}
+  Stipend: ${stipend || "N/A"} (Min: ${minStipend || "N/A"}, Max: ${
+    maxStipend || "N/A"
+  })
+  Additional Benefits: ${additionalBenefits || "N/A"}
+  Job Type: ${jobType || "N/A"}
+  Category: ${jobCategory?.categoryName || "N/A"}
+  SubCategory: ${jobSubCategory?.subCategoryName || "N/A"}
+  `;
+}
+
+function generateCompanyEvaluationPrompt(companyData) {
+  const {
+    companyName,
+    email,
+    designation,
+    hrAndRecruiterName,
+    phoneNumber,
+    countryCode,
+    logo,
+    smallLogo,
+    industryType,
+    companySize,
+    companyIntro,
+    foundedYear,
+    panOrGst,
+    country,
+    state,
+    city,
+    zipCode,
+    address,
+    branchLocation,
+    linkdinUrl,
+    instagramUrl,
+    youtubeUrl,
+    websiteUrl,
+    isProfileCompleted,
+  } = companyData || {};
+  let branchLocationsText = "N/A";
+
+  if (Array.isArray(branchLocation) && branchLocation.length > 0) {
+    branchLocationsText = branchLocation.join(", ");
+  } else if (
+    typeof branchLocation === "string" &&
+    branchLocation.trim() !== ""
+  ) {
+    branchLocationsText = branchLocation;
+  } else if (branchLocation && typeof branchLocation === "object") {
+    branchLocationsText = Object.values(branchLocation).join(", ");
+  }
+  return `
+    You are a company verification evaluator for an admin approval system.
+    Based on the following company registration details, give a score between 0 and 10 
+    where 0 means completely unqualified/suspicious and 10 means excellent, legitimate, and ready for immediate approval.
+    
+    Evaluation Criteria:
+    - Profile completeness and data quality
+    - Business legitimacy (valid PAN/GST, website, social presence)
+    - Contact information validity (email domain, phone format)
+    - Company information consistency
+    - Professional presentation (logo, description)
+    - Established presence (founded year, company size, branches)
+    
+    Only return a single number between 0-10, no explanation.
+    
+    Company Registration Details:
+    
+    Basic Information:
+    Company Name: ${companyName || "N/A"}
+    HR/Recruiter Name: ${hrAndRecruiterName || "N/A"}
+    Designation: ${designation || "N/A"}
+    Email: ${email || "N/A"}
+    Phone: ${countryCode || "N/A"} ${phoneNumber || "N/A"}
+    
+    Business Details:
+    Industry Type: ${industryType || "N/A"}
+    Company Size: ${companySize || "N/A"} employees
+    Founded Year: ${foundedYear || "N/A"}
+    PAN/GST Number: ${panOrGst || "N/A"}
+    
+    Company Description:
+    ${companyIntro || "N/A"}
+    
+    Location Details:
+    Address: ${address || "N/A"}
+    City: ${city || "N/A"}
+    State: ${state || "N/A"}
+    Country: ${country || "N/A"}
+    Zip Code: ${zipCode || "N/A"}
+    Branch Locations: ${branchLocationsText || "N/A"}
+    
+    Online Presence:
+    Website: ${websiteUrl || "N/A"}
+    LinkedIn: ${linkdinUrl || "N/A"}
+    Instagram: ${instagramUrl || "N/A"}
+    YouTube: ${youtubeUrl || "N/A"}
+    
+    Media Assets:
+    Logo Provided: ${logo ? "Yes" : "No"}
+    Small Logo Provided: ${smallLogo ? "Yes" : "No"}
+    
+    Profile Status:
+    Profile Completed: ${isProfileCompleted ? "Yes" : "No"}
+    
+    Note: Consider the following as red flags (lower score):
+    - Missing critical fields (company name, email, PAN/GST)
+    - Invalid/suspicious email domains (e.g., generic gmail, temporary emails)
+    - No website or social media presence
+    - Incomplete profile
+    - Very recent founded year with large company size claims
+    - Missing or low-quality logo
+    - Inconsistent or unprofessional information
+    `;
+}
+
+
 
 
 module.exports = {
@@ -185,5 +344,8 @@ module.exports = {
   generateSubCategoryPrompt,
   generateSkillsPrompt,
   generateJobOtherRequirementsPrompt,
-  generateInternAboutUsPrompt
+  generateInternAboutUsPrompt,
+  generateRoleTitlePrompt,
+  generateJobEvaluationPrompt,
+  generateCompanyEvaluationPrompt,
 };

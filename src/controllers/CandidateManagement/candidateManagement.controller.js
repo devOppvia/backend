@@ -13,7 +13,7 @@ const {
   sendWebPushNotification,
 } = require("../../helpers/WebPushNotification/notificationHelper");
 const getAvatarPath = require("../../helpers/static_avatar_path");
-const { GenerateInternScore } = require("../../helpers/geminiApi");
+const { GenerateInternScoreAI } = require("../../helpers/openAi");
 exports.applyJob = async (req, res) => {
   try {
     let { internId, jobId, companyId } = req.body || {};
@@ -104,7 +104,7 @@ exports.applyJob = async (req, res) => {
       }
     // }
 
-   GenerateInternScore(existingIntern, existingJobs);
+   GenerateInternScoreAI(existingIntern, existingJobs);
 
 
     await candidateManagementService.applyJob(internId, jobId, companyId);

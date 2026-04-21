@@ -4,11 +4,14 @@ const morgan = require("morgan");
 const routes = require("./routes/index");
 const { errorMiddleware } = require("./middlewares/errorMiddleware");
 const cookieParser = require("cookie-parser");
+const path = require("path");
+
 const app = express();
 app.use(
   cors({
     origin: [
       // "http://localhost:3001",
+      "http://192.168.1.6:3001",
       "http://192.168.1.6:5173",
       "https://testoppvia.vercel.app",
       "https://oppva.netlify.app",
@@ -70,10 +73,11 @@ app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 app.get("/" ,(req,res) => res.send("Hello....."))
 
 app.use("/api/v1", routes);
-
 
 
 app.use(errorMiddleware);

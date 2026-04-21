@@ -7,8 +7,8 @@ const validator = require("validator");
 const {
   generateCategoryPrompt,
 } = require("../../helpers/generateJobAboutPrompt");
-const { GenerateNewJobCategories } = require("../../helpers/geminiApi");
 const prisma = require("../../config/database");
+const { generateJobCategoryAI } = require("../../helpers/openAi");
 
 exports.createJobCategory = async (req, res) => {
   try {
@@ -291,24 +291,16 @@ exports.generateJobCategories = async (req, res) => {
       categories.push(categoryName.categoryName);
     }
     let categoryPrompt = await generateCategoryPrompt(categories, userInput);
-    let newCategories = await GenerateNewJobCategories(categoryPrompt);
-    function cleanJsonOutput(text) {
-      return text.replace(/```json|```/g, "").trim();
-    }
-    try {
-      let cleanOutPut = cleanJsonOutput(newCategories);
-      let categoriesArray = JSON.parse(cleanOutPut);
+    let newCategories = await generateJobCategoryAI(categoryPrompt);
+   
       return successResponse(
         res,
-        categoriesArray,
+        newCategories,
         "Job Categories fetched successfully",
         {},
         200
       );
-    } catch (error) {
-      console.error(error);
-      return errorResponse(res, "No suggetions", 400);
-    }
+   
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);
