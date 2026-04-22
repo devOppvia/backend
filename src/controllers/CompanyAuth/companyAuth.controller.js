@@ -157,11 +157,11 @@ exports.companyRegistrationStep1 = async (req, res) => {
     let emailOtp = generateOTP(4);
     let mobileOtp = generateOTP(4);
 
-    const sendWhatsapp = await sendWhatsAppOTP( phoneNumber, mobileOtp)
-    if(!sendWhatsapp.success){
-      return errorResponse(res, "Failed to send OTP to WhatsApp", 500);
-    }
-    console.log("response of whtsapp " , sendWhatsapp)
+    // const sendWhatsapp = await sendWhatsAppOTP( phoneNumber, mobileOtp)
+    // if(!sendWhatsapp.success){
+    //   return errorResponse(res, "Failed to send OTP to WhatsApp", 500);
+    // }
+    // console.log("response of whtsapp " , sendWhatsapp)
     // let otpEmail = String(Math.floor(1000 + Math.random() * 9000));
 
     // let otpMobile = String(Math.floor(1000 + Math.random() * 9000));
