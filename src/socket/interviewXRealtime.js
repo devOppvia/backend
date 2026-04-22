@@ -582,18 +582,49 @@ exports.startInterviewRealtimeServer = (server) => {
       return;
     }
 
-    // Check for existing session
+    // Check for existing session — reuse it instead of destroying it
     const existingSession = interviewSessions.get(interviewId);
-    if (existingSession) {
-      // Close existing session to prevent duplicates
-      console.log(`[Interview ${interviewId}] Closing existing session`);
-      existingSession.cleanup();
+    if (existingSession && existingSession.state !== 'ENDED') {
+      console.log(`[Interview ${interviewId}] Reconnecting to existing session (state: ${existingSession.state})`);
+      existingSession.browserWs = browserWs;
+      // Re-send session_ready so the client re-initialises audio
+      existingSession.sendToBrowser({ type: 'session_ready' });
+      // If the X AI session is ACTIVE and has already started, re-trigger the question
+      if (existingSession.state === 'ACTIVE' && existingSession.xaiWs?.readyState === WebSocket.OPEN) {
+        existingSession.xaiWs.send(JSON.stringify({
+          type: 'response.create',
+          response: { modalities: ['audio', 'text'] }
+        }));
+      }
+
+      browserWs.on('message', (message) => {
+        try { existingSession.handleBrowserMessage(message); } catch (err) {
+          console.error(`[Interview ${interviewId}] Browser message error:`, err);
+        }
+      });
+      browserWs.on('close', () => {
+        console.log(`🔌 Browser disconnected from interview ${interviewId}`);
+        setTimeout(() => {
+          const cur = interviewSessions.get(interviewId);
+          if (cur && cur.browserWs === browserWs) {
+            console.log(`[Interview ${interviewId}] No reconnection, cleaning up`);
+            cur.cleanup();
+          }
+        }, 30000);
+      });
+      browserWs.on('error', (err) => {
+        console.error(`[Interview ${interviewId}] Browser WebSocket error:`, err.message);
+      });
+      return; // Don't create a new session
     }
+
+    // Cleanup ended/stale session if any
+    if (existingSession) existingSession.cleanup();
 
     // Create new session
     const session = new InterviewXSession(browserWs, interviewId, interview.internId);
     interviewSessions.set(interviewId, session);
-    
+
     // Initialize session
     await session.init(interview);
 
