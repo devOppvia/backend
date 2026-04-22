@@ -11,14 +11,14 @@ router.delete("/questions/:id", ctrl.deleteQuestion);
 router.get("/results/:candidateManagementId", ctrl.getCallResults);
 
 // ── Twilio webhook routes (NO auth — Twilio posts here) ───────────────────────
-// Note: URLs now include attemptId so each attempt is tracked precisely
+// Intro: connects Twilio media stream to X AI Realtime (bidirectional audio)
 router.post("/webhook/intro/:callId/:attemptId", webhook.webhookIntro);
-router.post("/webhook/question/:callId/:attemptId/:questionIndex", webhook.webhookQuestion);
-router.post("/webhook/question/:callId/:attemptId/:questionIndex/:retryCount", webhook.webhookQuestion);
-router.post(
-  "/webhook/answer/:callId/:attemptId/:questionIndex",
-  webhook.webhookAnswer,
-);
+// Complete: call ended — score & store conversation
 router.post("/webhook/complete/:callId/:attemptId", webhook.webhookComplete);
+
+// ── Old webhook routes (commented out — X AI Realtime handles conversation) ───
+// router.post("/webhook/question/:callId/:attemptId/:questionIndex", webhook.webhookQuestion);
+// router.post("/webhook/question/:callId/:attemptId/:questionIndex/:retryCount", webhook.webhookQuestion);
+// router.post("/webhook/answer/:callId/:attemptId/:questionIndex", webhook.webhookAnswer);
 
 module.exports = router;

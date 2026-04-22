@@ -219,6 +219,7 @@ model Company {
   zipCode        String?
   address        String?
   branchLocation Json?
+  aiCallIntro    String?
 
   linkdinUrl            String?
   instagramUrl          String?

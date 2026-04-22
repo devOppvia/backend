@@ -3,7 +3,7 @@ const {
   errorResponse,
   successResponse,
 } = require("../../utils/responseHeader");
-const { generateAudio } = require("../../helpers/aiCallHelper");
+// const { generateAudio } = require("../../helpers/aiCallHelper"); // No longer needed — X AI Realtime handles audio dynamically
 const validator = require("validator");
 
 exports.addQuestion = async (req, res) => {
@@ -23,14 +23,9 @@ exports.addQuestion = async (req, res) => {
       },
     });
 
-    generateAudio(newQ.question, `q_${newQ.id}`)
-      .then((url) =>
-        prisma.aICallQuestion.update({
-          where: { id: newQ.id },
-          data: { audioUrl: url },
-        }),
-      )
-      .catch((err) => console.error("❌ Audio gen failed:", err));
+    // generateAudio(newQ.question, `q_${newQ.id}`) — No longer needed, X AI Realtime handles audio
+    // .then((url) => prisma.aICallQuestion.update({ where: { id: newQ.id }, data: { audioUrl: url } }))
+    // .catch((err) => console.error("❌ Audio gen failed:", err));
 
     return successResponse(res, newQ, "Question added successfully", {}, 201);
   } catch (err) {
@@ -74,16 +69,11 @@ exports.updateQuestion = async (req, res) => {
 
     const updated = await prisma.aICallQuestion.update({ where: { id }, data });
 
-    if (question) {
-      generateAudio(updated.question, `q_${updated.id}`)
-        .then((url) =>
-          prisma.aICallQuestion.update({
-            where: { id: updated.id },
-            data: { audioUrl: url },
-          }),
-        )
-        .catch((err) => console.error("❌ Audio regen failed:", err));
-    }
+    // if (question) {
+    //   generateAudio(updated.question, `q_${updated.id}`) — No longer needed
+    //     .then((url) => prisma.aICallQuestion.update({ where: { id: updated.id }, data: { audioUrl: url } }))
+    //     .catch((err) => console.error("❌ Audio regen failed:", err));
+    // }
 
     return successResponse(res, updated, "Question updated", {}, 200);
   } catch (err) {

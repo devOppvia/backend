@@ -1,7 +1,7 @@
 require("dotenv").config();
 const twilio = require("twilio");
 const prisma = require("../../config/database");
-const { prepareCallAudio } = require("../../helpers/aiCallHelper");
+// const { prepareCallAudio } = require("../../helpers/aiCallHelper"); // No longer needed — X AI Realtime handles audio dynamically
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
@@ -10,7 +10,7 @@ const twilioClient = twilio(
 
 const BASE_URL =
   process.env.BACKEND_PUBLIC_URL ||
-  "https://de2e-2401-4900-1c80-8af9-401e-d4e1-6646-d2d.ngrok-free.app/api/v1";
+  "https://d047-2401-4900-1f3f-fb81-5598-93c-ca59-bcae.ngrok-free.app/api/v1";
 
 // Delay in ms for each retry after a failed attempt
 const RETRY_DELAYS = {
@@ -113,8 +113,8 @@ async function placeCallAttempt(aiCall) {
     return;
   }
 
-  // Pre-generate ElevenLabs audio
-  await prepareCallAudio(company.companyName, company?.aiCallIntro, questions);
+  // Pre-generate X AI TTS audio — no longer needed, X AI Realtime handles audio dynamically
+  // await prepareCallAudio(company.companyName, company?.aiCallIntro, questions);
 
   const newAttemptNumber = aiCall.attemptNumber + 1;
 

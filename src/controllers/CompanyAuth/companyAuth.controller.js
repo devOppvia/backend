@@ -408,11 +408,15 @@ exports.companyRegistrationStep4 = async (req, res) => {
     ) {
       return errorResponse(res, "Invalid LinkedIn URL format", 400);
     }
-    if (!/^https?:\/\/(www\.)?linkedin\.com\/.*$/.test(linkdinUrl)) {
+    if (
+      !/^https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9-_%]+\/?$/.test(
+        linkdinUrl.trim(),
+      )
+    ) {
       return errorResponse(
         res,
         "LinkedIn URL must be a valid linkedin.com profile or page",
-        400
+        400,
       );
     }
 

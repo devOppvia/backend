@@ -43,6 +43,27 @@ CREATE TYPE "public"."ResumeStatus" AS ENUM ('REVIEW', 'SHORTLISTED', 'INTERVIEW
 -- CreateEnum
 CREATE TYPE "public"."InterViewType" AS ENUM ('ONLINE', 'OFFLINE');
 
+-- CreateEnum
+CREATE TYPE "public"."AIInterviewType" AS ENUM ('COMPANY', 'PRACTICE');
+
+-- CreateEnum
+CREATE TYPE "public"."AIInterviewStatus" AS ENUM ('SETUP', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED');
+
+-- CreateEnum
+CREATE TYPE "public"."AIInterviewerPreference" AS ENUM ('MALE', 'FEMALE');
+
+-- CreateEnum
+CREATE TYPE "public"."AIInterviewCategory" AS ENUM ('BEHAVIORAL', 'TECHNICAL', 'CASE_STUDY', 'SYSTEM_DESIGN', 'CODING_DSA', 'HR_CULTURE_FIT', 'PROJECT_DEEP_DIVE', 'RESUME_BASED', 'DEBUGGING', 'MIXED');
+
+-- CreateEnum
+CREATE TYPE "public"."ExpressionEmotion" AS ENUM ('CONFIDENT', 'NERVOUS', 'NEUTRAL', 'HAPPY', 'CONFUSED');
+
+-- CreateEnum
+CREATE TYPE "public"."AICallStatus" AS ENUM ('PENDING', 'CALLING', 'COMPLETED', 'ALL_ATTEMPTS_EXHAUSTED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "public"."AICallAttemptStatus" AS ENUM ('IN_PROGRESS', 'NOT_ANSWERED', 'ANSWERED_COMPLETED', 'ANSWERED_DROPPED', 'MACHINE_DETECTED', 'FAILED');
+
 -- CreateTable
 CREATE TABLE "public"."admins" (
     "id" TEXT NOT NULL,
@@ -176,6 +197,7 @@ CREATE TABLE "public"."companies" (
     "zipCode" TEXT,
     "address" TEXT,
     "branchLocation" JSONB,
+    "aiCallIntro" TEXT,
     "linkdinUrl" TEXT,
     "instagramUrl" TEXT,
     "youtubeUrl" TEXT,
@@ -298,6 +320,8 @@ CREATE TABLE "public"."jobs" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "employmentType" "public"."WorkMode" NOT NULL DEFAULT 'ANY',
+    "callEnable" BOOLEAN NOT NULL DEFAULT false,
+    "callConditionScore" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "jobs_pkey" PRIMARY KEY ("id")
 );
@@ -313,6 +337,7 @@ CREATE TABLE "public"."subscriptions" (
     "jobDaysActive" INTEGER NOT NULL,
     "expireDaysPackage" INTEGER NOT NULL,
     "isDelete" BOOLEAN NOT NULL DEFAULT false,
+    "isRecommended" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -329,6 +354,9 @@ CREATE TABLE "public"."candidate_management" (
     "deletedAt" TIMESTAMP(3),
     "isJoined" BOOLEAN NOT NULL DEFAULT false,
     "candidateStatus" "public"."CandidateStatus" NOT NULL DEFAULT 'SHORTLISTED',
+    "isScored" BOOLEAN NOT NULL DEFAULT false,
+    "score" INTEGER NOT NULL DEFAULT 0,
+    "scoredReason" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -559,6 +587,160 @@ CREATE TABLE "public"."interview" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "interview_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."intern_subscription_plans" (
+    "id" TEXT NOT NULL,
+    "planName" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "price" INTEGER NOT NULL,
+    "discountedPrice" INTEGER NOT NULL,
+    "interviewCredits" INTEGER NOT NULL,
+    "duration" INTEGER NOT NULL,
+    "features" JSONB NOT NULL,
+    "isPopular" BOOLEAN NOT NULL DEFAULT false,
+    "isDelete" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "intern_subscription_plans_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."intern_subscriptions" (
+    "id" TEXT NOT NULL,
+    "internId" TEXT NOT NULL,
+    "planId" TEXT NOT NULL,
+    "interviewCreditsTotal" INTEGER NOT NULL,
+    "interviewCreditsRemaining" INTEGER NOT NULL,
+    "subscriptionStart" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "subscriptionEnd" TIMESTAMP(3) NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "amountPaid" INTEGER NOT NULL,
+    "razorpay_order_id" TEXT,
+    "razorpay_payment_id" TEXT,
+    "razorpay_signature" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "intern_subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_interviews" (
+    "id" TEXT NOT NULL,
+    "internId" TEXT NOT NULL,
+    "type" "public"."AIInterviewType" NOT NULL,
+    "interviewerPreference" "public"."AIInterviewerPreference" NOT NULL DEFAULT 'MALE',
+    "interviewCategory" "public"."AIInterviewCategory" NOT NULL DEFAULT 'MIXED',
+    "identityVerification" BOOLEAN NOT NULL DEFAULT false,
+    "duration" INTEGER NOT NULL,
+    "jobDescription" TEXT,
+    "companyWebsite" TEXT,
+    "additionalContext" TEXT,
+    "resumeSnapshot" TEXT NOT NULL,
+    "status" "public"."AIInterviewStatus" NOT NULL DEFAULT 'SETUP',
+    "totalQuestions" INTEGER,
+    "overallScore" DOUBLE PRECISION,
+    "avgAnswerScore" DOUBLE PRECISION,
+    "starUsed" INTEGER,
+    "topSkill" TEXT,
+    "durationActual" INTEGER,
+    "confidenceScore" DOUBLE PRECISION,
+    "dominantEmotion" TEXT,
+    "behaviorSummary" JSONB,
+    "aiInsights" JSONB,
+    "reportPdfPath" TEXT,
+    "startedAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ai_interviews_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_interview_questions" (
+    "id" TEXT NOT NULL,
+    "aiInterviewId" TEXT NOT NULL,
+    "questionNumber" INTEGER NOT NULL,
+    "questionText" TEXT NOT NULL,
+    "answerText" TEXT,
+    "answerScore" DOUBLE PRECISION,
+    "starUsed" BOOLEAN NOT NULL DEFAULT false,
+    "skillTested" TEXT,
+    "aiFeedback" TEXT,
+    "answeredAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ai_interview_questions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_interview_expressions" (
+    "id" TEXT NOT NULL,
+    "aiInterviewId" TEXT NOT NULL,
+    "questionId" TEXT,
+    "emotion" "public"."ExpressionEmotion" NOT NULL DEFAULT 'NEUTRAL',
+    "confidenceScore" DOUBLE PRECISION NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ai_interview_expressions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_call_questions" (
+    "id" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "jobId" TEXT,
+    "question" TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "audioUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ai_call_questions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_calls" (
+    "id" TEXT NOT NULL,
+    "internId" TEXT NOT NULL,
+    "jobId" TEXT NOT NULL,
+    "companyId" TEXT NOT NULL,
+    "candidateManagementId" TEXT NOT NULL,
+    "status" "public"."AICallStatus" NOT NULL DEFAULT 'PENDING',
+    "attemptNumber" INTEGER NOT NULL DEFAULT 0,
+    "nextCallAt" TIMESTAMP(3),
+    "allAttemptsExhausted" BOOLEAN NOT NULL DEFAULT false,
+    "triggerScore" DOUBLE PRECISION NOT NULL,
+    "transcript" JSONB,
+    "callScore" DOUBLE PRECISION,
+    "callSummary" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ai_calls_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ai_call_attempts" (
+    "id" TEXT NOT NULL,
+    "aiCallId" TEXT NOT NULL,
+    "attemptNumber" INTEGER NOT NULL,
+    "callSid" TEXT,
+    "status" "public"."AICallAttemptStatus" NOT NULL DEFAULT 'IN_PROGRESS',
+    "duration" INTEGER,
+    "scheduledAt" TIMESTAMP(3) NOT NULL,
+    "answeredAt" TIMESTAMP(3),
+    "failReason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ai_call_attempts_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -808,6 +990,66 @@ CREATE UNIQUE INDEX "intern_otps_mobileNumber_key" ON "public"."intern_otps"("mo
 CREATE UNIQUE INDEX "interview_id_key" ON "public"."interview"("id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "intern_subscription_plans_id_key" ON "public"."intern_subscription_plans"("id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "intern_subscriptions_id_key" ON "public"."intern_subscriptions"("id");
+
+-- CreateIndex
+CREATE INDEX "intern_subscriptions_internId_isActive_idx" ON "public"."intern_subscriptions"("internId", "isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_interviews_id_key" ON "public"."ai_interviews"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_interviews_internId_status_idx" ON "public"."ai_interviews"("internId", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_interview_questions_id_key" ON "public"."ai_interview_questions"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_interview_questions_aiInterviewId_questionNumber_idx" ON "public"."ai_interview_questions"("aiInterviewId", "questionNumber");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_interview_expressions_id_key" ON "public"."ai_interview_expressions"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_interview_expressions_aiInterviewId_idx" ON "public"."ai_interview_expressions"("aiInterviewId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_call_questions_id_key" ON "public"."ai_call_questions"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_call_questions_companyId_jobId_isActive_idx" ON "public"."ai_call_questions"("companyId", "jobId", "isActive");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_calls_id_key" ON "public"."ai_calls"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_calls_internId_status_idx" ON "public"."ai_calls"("internId", "status");
+
+-- CreateIndex
+CREATE INDEX "ai_calls_companyId_status_idx" ON "public"."ai_calls"("companyId", "status");
+
+-- CreateIndex
+CREATE INDEX "ai_calls_candidateManagementId_idx" ON "public"."ai_calls"("candidateManagementId");
+
+-- CreateIndex
+CREATE INDEX "ai_calls_nextCallAt_allAttemptsExhausted_status_idx" ON "public"."ai_calls"("nextCallAt", "allAttemptsExhausted", "status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_call_attempts_id_key" ON "public"."ai_call_attempts"("id");
+
+-- CreateIndex
+CREATE INDEX "ai_call_attempts_aiCallId_idx" ON "public"."ai_call_attempts"("aiCallId");
+
+-- CreateIndex
+CREATE INDEX "ai_call_attempts_callSid_idx" ON "public"."ai_call_attempts"("callSid");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ai_call_attempts_aiCallId_attemptNumber_key" ON "public"."ai_call_attempts"("aiCallId", "attemptNumber");
+
+-- CreateIndex
 CREATE INDEX "_InternsToSkills_B_index" ON "public"."_InternsToSkills"("B");
 
 -- CreateIndex
@@ -923,6 +1165,42 @@ ALTER TABLE "public"."interview" ADD CONSTRAINT "interview_internId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "public"."interview" ADD CONSTRAINT "interview_candidateManagementId_fkey" FOREIGN KEY ("candidateManagementId") REFERENCES "public"."candidate_management"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."intern_subscriptions" ADD CONSTRAINT "intern_subscriptions_internId_fkey" FOREIGN KEY ("internId") REFERENCES "public"."interns"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."intern_subscriptions" ADD CONSTRAINT "intern_subscriptions_planId_fkey" FOREIGN KEY ("planId") REFERENCES "public"."intern_subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_interviews" ADD CONSTRAINT "ai_interviews_internId_fkey" FOREIGN KEY ("internId") REFERENCES "public"."interns"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_interview_questions" ADD CONSTRAINT "ai_interview_questions_aiInterviewId_fkey" FOREIGN KEY ("aiInterviewId") REFERENCES "public"."ai_interviews"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_interview_expressions" ADD CONSTRAINT "ai_interview_expressions_aiInterviewId_fkey" FOREIGN KEY ("aiInterviewId") REFERENCES "public"."ai_interviews"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_call_questions" ADD CONSTRAINT "ai_call_questions_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."companies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_call_questions" ADD CONSTRAINT "ai_call_questions_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "public"."jobs"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_calls" ADD CONSTRAINT "ai_calls_internId_fkey" FOREIGN KEY ("internId") REFERENCES "public"."interns"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_calls" ADD CONSTRAINT "ai_calls_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "public"."companies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_calls" ADD CONSTRAINT "ai_calls_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "public"."jobs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_calls" ADD CONSTRAINT "ai_calls_candidateManagementId_fkey" FOREIGN KEY ("candidateManagementId") REFERENCES "public"."candidate_management"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ai_call_attempts" ADD CONSTRAINT "ai_call_attempts_aiCallId_fkey" FOREIGN KEY ("aiCallId") REFERENCES "public"."ai_calls"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."_InternsToSkills" ADD CONSTRAINT "_InternsToSkills_A_fkey" FOREIGN KEY ("A") REFERENCES "public"."interns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
