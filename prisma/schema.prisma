@@ -860,6 +860,11 @@ model AIInterview {
   resumeSnapshot        String                   // extracted resume text at session start
   status                AIInterviewStatus        @default(SETUP)
 
+  // X AI System Configuration
+  voiceUsed             String                   @default("eve")  // eve or rex
+  vadThreshold          Float                    @default(0.5)
+  silenceDuration       Int                      @default(700) // ms
+  
   // Results — populated on COMPLETE
   totalQuestions        Int?
   overallScore          Float?                   // 0-100

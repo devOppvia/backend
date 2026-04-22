@@ -18,7 +18,19 @@ exports.getCallSession = (callId) => callSessions.get(callId);
 exports.deleteCallSession = (callId) => callSessions.delete(callId);
 
 exports.startRealtimeServer = (server) => {
-  const wss = new WebSocket.Server({ server });
+  const wss = new WebSocket.Server({ noServer: true });
+
+  // Handle upgrade manually for media-stream path
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = new URL(request.url, 'http://localhost').pathname;
+    
+    if (pathname.startsWith('/media-stream')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
+    // Let other handlers process other paths
+  });
 
   wss.on("connection", (twilioWs, req) => {
     console.log("🔌 Twilio media stream connected");
