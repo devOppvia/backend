@@ -89,6 +89,13 @@ exports.startInterview = async (req, res) => {
     await internSubscriptionService.decrementCredit(subscription.id);
 
     const totalQuestions = getQuestionCount(interview.duration);
+    
+    // Defensive check: ensure totalQuestions is valid
+    if (!totalQuestions || totalQuestions <= 0) {
+      console.error(`[Interview ${id}] ERROR: Invalid totalQuestions: ${totalQuestions}`);
+      return errorResponse(res, "Invalid interview configuration", 500);
+    }
+    
     const startedAt = new Date();
 
     // Update interview status
@@ -102,12 +109,23 @@ exports.startInterview = async (req, res) => {
     const interviewWithTotal = { ...interview, totalQuestions };
     console.log(`[Interview ${id}] Generating all ${totalQuestions} questions...`);
     
-    const allQuestions = await geminiService.generateAllQuestions({
+    let allQuestions = await geminiService.generateAllQuestions({
       interview: interviewWithTotal,
       totalQuestions,
     });
     
     console.log(`[Interview ${id}] Generated ${allQuestions.length} questions`);
+
+    // Defensive check: ensure questions were generated
+    if (!allQuestions || allQuestions.length === 0) {
+      console.error(`[Interview ${id}] ERROR: No questions generated! Using fallback.`);
+      // Fallback: create at least one default question
+      allQuestions.push({
+        question: "Tell me about yourself and your background.",
+        questionType: "OPENING",
+        skillTested: "Self Introduction",
+      });
+    }
 
     // Store ALL questions in database
     const createdQuestions = [];
@@ -128,6 +146,12 @@ exports.startInterview = async (req, res) => {
     }
     
     console.log(`[Interview ${id}] Stored all ${createdQuestions.length} questions in DB`);
+
+    // Defensive check: ensure at least one question exists
+    if (createdQuestions.length === 0) {
+      console.error(`[Interview ${id}] ERROR: No questions were created!`);
+      return errorResponse(res, "Failed to generate interview questions", 500);
+    }
 
     // Build WebSocket URL
     const wsUrl = buildWsUrl(id);
