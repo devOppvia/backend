@@ -61,7 +61,11 @@ class InterviewXSession {
 
   async connectToXAI(firstQuestionText) {
     console.log(`[Interview ${this.interviewId}] Connecting to X AI Realtime...`);
-    
+
+    // Flags to prevent duplicate sends
+    this.hasSessionUpdateSent = false;
+    this.hasResponseCreateSent = false;
+
     this.xaiWs = new WebSocket('wss://api.x.ai/v1/realtime', {
       headers: {
         Authorization: `Bearer ${process.env.XAI_API_KEY}`,
@@ -109,6 +113,11 @@ class InterviewXSession {
         break;
 
       case 'conversation.created':
+        if (this.hasSessionUpdateSent) {
+          console.log(`[Interview ${this.interviewId}] Conversation created again, but session.update already sent - skipping`);
+          break;
+        }
+        this.hasSessionUpdateSent = true;
         console.log(`[Interview ${this.interviewId}] Conversation created, sending session.update...`);
         // Send session.update to configure the session
         const instructions = this.buildInterviewInstructions(this.currentQuestion?.questionText || '');
@@ -136,6 +145,11 @@ class InterviewXSession {
         break;
 
       case 'session.updated':
+        if (this.hasResponseCreateSent) {
+          console.log(`[Interview ${this.interviewId}] Session updated again, but response.create already sent - skipping`);
+          break;
+        }
+        this.hasResponseCreateSent = true;
         console.log(`[Interview ${this.interviewId}] Session updated, sending response.create...`);
         this.state = 'ACTIVE';
         // Start the conversation
