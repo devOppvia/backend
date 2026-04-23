@@ -487,75 +487,18 @@ class InterviewXSession {
     const duration = this.maxDuration;
     const totalQ = this.totalQuestions;
 
-    const taskSection = isSubsequentQuestion
-      ? `CURRENT TASK: The candidate just finished their answer. Say EXACTLY this, word for word — do not rephrase:
-"Thank you for your response. Here is question ${questionNumber}: ${questionText}"`
-      : `INTERVIEW FLOW:
-1. Greet the candidate: "Hello! I'm your AI interviewer today. Let's begin."
-2. Ask the first question EXACTLY as written, word for word: "${questionText}"`;
+    // Basic simple prompt - just define role and key rules
+    return `You are an AI interviewer conducting a ${category} interview.
 
-    // ═══════════════════════════════════════════════════════════════════
-    // LAYER 1 + 2: SYSTEM PERSONA + CONTEXT (Strict Verbatim Mode)
-    // ═══════════════════════════════════════════════════════════════════
-    return `╔════════════════════════════════════════════════════════════════╗
-║           STRICT VERBATIM SPEAKER MODE - DO NOT DEVIATE         ║
-╚════════════════════════════════════════════════════════════════╝
-
-ROLE DEFINITION:
-You are a TEXT-TO-SPEECH INTERVIEWER, not a conversational AI.
-Your sole purpose is to convert provided text into spoken audio exactly as written.
-
-═══════════════════════════════════════════════════════════════════
-LAYER 1 - ABSOLUTE PROHIBITIONS (ZERO TOLERANCE):
-═══════════════════════════════════════════════════════════════════
-❌ NEVER add: "Here's your question", "Next up:", "Moving on..."
-❌ NEVER add: "So", "Well", "Now", "Okay", "Alright" at start
-❌ NEVER add: "Don't worry", "Take your time", "That's okay"
-❌ NEVER rephrase, simplify, or expand the provided text
-❌ NEVER explain the question or provide context
-❌ NEVER acknowledge the previous answer beyond a brief "Thank you"
-❌ NEVER add your own personality or conversational style
-
-═══════════════════════════════════════════════════════════════════
-LAYER 2 - INTERVIEW CONTEXT:
-═══════════════════════════════════════════════════════════════════
-Interview Type: ${category}
-Duration: ${duration} minutes
-Total Questions: ${totalQ}
-
-FLOW:
-1. You will receive each question via system message before assistant message
-2. Speak ONLY that question text, naturally but verbatim
-3. Stop immediately after the question
-4. Wait silently for candidate's answer
-5. After user stops speaking, next question will be provided
-
-═══════════════════════════════════════════════════════════════════
-LAYER 3 - VERBATIM EXECUTION RULE:
-═══════════════════════════════════════════════════════════════════
-When you receive text in an assistant message, you MUST:
-✓ Speak it exactly as written
-✓ Maintain natural intonation for questions
-✓ STOP immediately after the last word
-✓ Do not add any transitional phrases
-
-EXAMPLE OF CORRECT BEHAVIOR:
-System: "What is dependency injection?"
-You speak: "What is dependency injection?" [STOP]
-
-EXAMPLE OF WRONG BEHAVIOR:
-System: "What is dependency injection?"
-You speak: "Okay, so here's the next question. What is dependency injection? Take your time." [WRONG - added filler]
-
-═══════════════════════════════════════════════════════════════════
-VIOLATION CONSEQUENCE:
-If you add ANY words not in the provided text, you have failed.
-═══════════════════════════════════════════════════════════════════`;
+Instructions:
+- Interview duration: ${duration} minutes, ${totalQ} questions total
+- Ask questions clearly and naturally
+- Wait for the candidate to finish speaking before responding
+- Do not provide feedback on answers during the interview
+- Keep responses focused on asking questions only`;
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // LAYER 3: Per-Question Verbatim Execution with Pre-Prompting
-  // ═══════════════════════════════════════════════════════════════════
+  // Basic method to speak current question
   speakCurrentQuestion() {
     const question = this.currentQuestion?.questionText;
     if (!question) {
@@ -565,20 +508,7 @@ If you add ANY words not in the provided text, you have failed.
 
     console.log(`[Interview ${this.interviewId}] Speaking Q${this.questionNumber}: "${question.substring(0, 60)}..."`);
 
-    // ─── STEP 1: Priming Reminder (Reinforces Layer 1-2) ────────────
-    this.xaiWs.send(JSON.stringify({
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'system',
-        content: [{
-          type: 'input_text',
-          text: `STRICT MODE: Speak ONLY the following text verbatim. NO preamble. NO "Here's the question". NO filler words. Just the exact text then STOP.`,
-        }],
-      },
-    }));
-
-    // ─── STEP 2: The Exact Question (Primary Content) ────────────────
+    // Use conversation.item.create to set the question text
     this.xaiWs.send(JSON.stringify({
       type: 'conversation.item.create',
       item: {
@@ -591,16 +521,13 @@ If you add ANY words not in the provided text, you have failed.
       },
     }));
 
-    // ─── STEP 3: Response Create with Micro-Instruction ─────────────
+    // Generate audio response
     this.xaiWs.send(JSON.stringify({
       type: 'response.create',
-      response: {
-        modalities: ['audio', 'text'],
-        instructions: `Speak the previous assistant message verbatim. Stop immediately after.`,
-      }
+      response: { modalities: ['audio', 'text'] }
     }));
 
-    // Notify frontend with exact text
+    // Notify frontend
     this.sendToBrowser({
       type: 'question_update',
       question: question,
