@@ -124,14 +124,12 @@ class InterviewXSession {
           break;
         }
         this.hasSessionUpdateSent = true;
-        console.log(`[Interview ${this.interviewId}] Conversation created, sending session.update...`);
-        // Send session.update to configure the session
-        const instructions = this.buildInterviewInstructions(this.currentQuestion?.questionText || '');
+        console.log(`[Interview ${this.interviewId}] Conversation created, sending initial session.update...`);
+        // Send initial session.update WITHOUT instructions (question will be added in speakCurrentQuestion)
         this.xaiWs.send(JSON.stringify({
           type: 'session.update',
           session: {
             modalities: ['audio', 'text'],
-            instructions: instructions,
             voice: this.voice,
             input_audio_format: 'pcm16',
             output_audio_format: 'pcm16',
@@ -147,7 +145,7 @@ class InterviewXSession {
             },
           },
         }));
-        console.log(`[Interview ${this.interviewId}] Sent session.update after conversation.created`);
+        console.log(`[Interview ${this.interviewId}] Sent initial session.update after conversation.created`);
         break;
 
       case 'session.updated':
@@ -481,24 +479,31 @@ class InterviewXSession {
     return Object.entries(skillCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
   }
 
-  buildInterviewInstructions(questionText, opts = {}) {
-    const { isSubsequentQuestion = false, questionNumber = 1 } = opts;
+  // Build instructions with CURRENT QUESTION embedded - this is the key fix!
+  buildInterviewInstructions(questionText, isFirstQuestion = false) {
     const category = this.interview?.interviewCategory || 'MIXED';
     const duration = this.maxDuration;
     const totalQ = this.totalQuestions;
 
-    // Basic simple prompt - just define role and key rules
+    const greeting = isFirstQuestion 
+      ? `Hello! I'm your AI interviewer today. Let's begin.` 
+      : `Thank you for your answer.`;
+
     return `You are an AI interviewer conducting a ${category} interview.
 
-Instructions:
-- Interview duration: ${duration} minutes, ${totalQ} questions total
-- Ask questions clearly and naturally
-- Wait for the candidate to finish speaking before responding
-- Do not provide feedback on answers during the interview
-- Keep responses focused on asking questions only`;
+YOUR CURRENT TASK:
+${greeting}
+
+Now ask this EXACT question naturally: "${questionText}"
+
+CRITICAL RULES:
+- Speak the question naturally but DO NOT change any words
+- Stop immediately after asking the question
+- Wait for the candidate to answer
+- Interview: ${duration} minutes, ${totalQ} questions total`;
   }
 
-  // Basic method to speak current question
+  // KEY FIX: Use session.update with question in instructions, NOT conversation.item.create
   speakCurrentQuestion() {
     const question = this.currentQuestion?.questionText;
     if (!question) {
@@ -506,22 +511,18 @@ Instructions:
       return;
     }
 
+    const isFirstQuestion = this.questionNumber === 1;
     console.log(`[Interview ${this.interviewId}] Speaking Q${this.questionNumber}: "${question.substring(0, 60)}..."`);
 
-    // Use conversation.item.create to set the question text
+    // STEP 1: Update session with CURRENT QUESTION in instructions
     this.xaiWs.send(JSON.stringify({
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'assistant',
-        content: [{
-          type: 'input_text',
-          text: question,
-        }],
+      type: 'session.update',
+      session: {
+        instructions: this.buildInterviewInstructions(question, isFirstQuestion),
       },
     }));
 
-    // Generate audio response
+    // STEP 2: Generate response - X AI will speak based on updated instructions
     this.xaiWs.send(JSON.stringify({
       type: 'response.create',
       response: { modalities: ['audio', 'text'] }
