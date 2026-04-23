@@ -145,7 +145,7 @@ class InterviewXSession {
         this.sendToBrowser({ type: 'session_ready' });
         break;
 
-      case 'response.audio.delta':
+      case 'response.output_audio.delta':
         // Forward audio to browser
         if (event.delta) {
           console.log(`[Interview ${this.interviewId}] Forwarding audio chunk to browser, length: ${event.delta.length}`);
@@ -156,7 +156,7 @@ class InterviewXSession {
         }
         break;
 
-      case 'response.audio_transcript.delta':
+      case 'response.output_audio_transcript.delta':
         // Send transcript for UI display
         if (event.delta) {
           this.sendToBrowser({
@@ -166,7 +166,7 @@ class InterviewXSession {
         }
         break;
 
-      case 'response.audio_transcript.done':
+      case 'response.output_audio_transcript.done':
         // X AI finished speaking question
         this.sendToBrowser({ type: 'ai_done_speaking' });
         break;
