@@ -42,8 +42,9 @@ class InterviewXSession {
     this.interview = interviewData;
     this.totalQuestions = interviewData.totalQuestions || 8;
     this.maxDuration = interviewData.duration || 15;
-    this.voice = interviewData.interviewerPreference === 'FEMALE' ? 'eve' : 'rex';
-    
+    // this.voice = interviewData.interviewerPreference === 'FEMALE' ? 'eve' : 'rex';
+    this.voice = 'eve';
+
     // Load first question from database
     const firstQuestion = await prisma.aIInterviewQuestion.findFirst({
       where: { aiInterviewId: this.interviewId, questionNumber: 1 },
@@ -68,38 +69,8 @@ class InterviewXSession {
     });
 
     this.xaiWs.on('open', () => {
-      console.log(`[Interview ${this.interviewId}] X AI WebSocket OPEN`);
-      console.log(`[Interview ${this.interviewId}] Using voice: ${this.voice}`);
-      console.log(`[Interview ${this.interviewId}] First question: ${firstQuestionText?.substring(0, 50)}...`);
-      
-      // Build instructions with first question embedded
-      const instructions = this.buildInterviewInstructions(firstQuestionText);
-      console.log(`[Interview ${this.interviewId}] Instructions length: ${instructions.length} chars`);
-      
-      // Send session configuration
-      const sessionMsg = {
-        type: 'session.update',
-        session: {
-          modalities: ['audio', 'text'],
-          instructions: instructions,
-          voice: this.voice,
-          input_audio_format: 'pcm16',
-          output_audio_format: 'pcm16',
-          turn_detection: {
-            type: 'server_vad',
-            threshold: 0.5,
-            prefix_padding_ms: 300,
-            silence_duration_ms: 700,
-          },
-          input_audio_transcription: {
-            model: 'grok-2-mini',
-            language: 'en',
-          },
-        },
-      };
-      
-      console.log(`[Interview ${this.interviewId}] Sending session.update...`);
-      this.xaiWs.send(JSON.stringify(sessionMsg));
+      console.log(`[Interview ${this.interviewId}] X AI WebSocket OPEN - waiting for session.created...`);
+      // session.update is now sent in response to session.created event
     });
 
     // ─── X AI → Browser ───────────────────────────────────────────────────
