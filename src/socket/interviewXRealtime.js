@@ -202,9 +202,11 @@ class InterviewXSession {
         break;
 
       case 'conversation.item.input_audio_transcription.completed':
-        // Got user's answer transcript
-        if (event.transcript) {
+        // Only handle when ACTIVE — ignore stale transcripts during scoring/generating next question
+        if (event.transcript && this.state === 'ACTIVE') {
           this.handleUserAnswer(event.transcript);
+        } else if (event.transcript) {
+          console.log(`[Interview ${this.interviewId}] Ignoring transcript in state ${this.state}: "${event.transcript.substring(0, 50)}"`);
         }
         break;
 
@@ -229,8 +231,13 @@ class InterviewXSession {
   }
 
   async handleUserAnswer(transcript) {
+    // Double-guard: reject if already processing a previous answer
+    if (this.state !== 'ACTIVE') {
+      console.log(`[Interview ${this.interviewId}] handleUserAnswer called in wrong state ${this.state}, ignoring`);
+      return;
+    }
     console.log(`[Interview ${this.interviewId}] User answer: "${transcript.substring(0, 50)}..."`);
-    
+
     this.state = 'SCORING';
     this.lastAnswerTranscript = transcript;
     
@@ -326,19 +333,17 @@ class InterviewXSession {
         totalQuestions: this.totalQuestions,
       });
 
-      // Send the next question to X AI
+      // Update X AI instructions to speak the exact next question verbatim, then generate response
+      // Using session.update instead of conversation.item.create so X AI speaks exact text not a rephrased version
       this.xaiWs.send(JSON.stringify({
-        type: 'conversation.item.create',
-        item: {
-          type: 'message',
-          role: 'assistant',
-          content: [{
-            type: 'text',
-            text: `Thank you for your answer. Here's the next question: ${nextQ.question}`,
-          }],
+        type: 'session.update',
+        session: {
+          instructions: this.buildInterviewInstructions(nextQ.question, {
+            isSubsequentQuestion: true,
+            questionNumber: this.questionNumber,
+          }),
         },
       }));
-
       this.xaiWs.send(JSON.stringify({ type: 'response.create' }));
 
     } catch (err) {
@@ -477,37 +482,32 @@ class InterviewXSession {
     return Object.entries(skillCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
   }
 
-  buildInterviewInstructions(firstQuestionText) {
+  buildInterviewInstructions(questionText, opts = {}) {
+    const { isSubsequentQuestion = false, questionNumber = 1 } = opts;
     const category = this.interview?.interviewCategory || 'MIXED';
     const duration = this.maxDuration;
     const totalQ = this.totalQuestions;
-    
-    return `You are a professional AI interviewer conducting a ${category} interview. 
+
+    const taskSection = isSubsequentQuestion
+      ? `CURRENT TASK: The candidate just finished their answer. Say EXACTLY this, word for word — do not rephrase:
+"Thank you for your response. Here is question ${questionNumber}: ${questionText}"`
+      : `INTERVIEW FLOW:
+1. Greet the candidate: "Hello! I'm your AI interviewer today. Let's begin."
+2. Ask the first question EXACTLY as written, word for word: "${questionText}"`;
+
+    return `You are a professional AI interviewer conducting a ${category} interview.
 
 The interview will last approximately ${duration} minutes with ${totalQ} questions total.
 
-YOUR ROLE:
-- Ask interview questions clearly and professionally
-- Listen to the candidate's answers
-- Provide a brief acknowledgment before moving to the next question
-- Be encouraging but maintain professionalism
-
-INTERVIEW FLOW:
-1. Start by introducing yourself: "Hello! I'm your AI interviewer today. Let's begin with the first question."
-2. Ask the first question: "${firstQuestionText}"
-3. After the candidate answers each question, acknowledge briefly and ask the next question
-4. When all questions are complete, thank the candidate and end the conversation
+${taskSection}
 
 IMPORTANT RULES:
-- Ask only ONE question at a time
+- Ask only ONE question at a time and then stop speaking
 - Wait for the candidate to finish speaking before responding
-- If the candidate asks you to repeat, repeat the same question clearly
-- If the candidate says "end interview" or "stop", acknowledge and end gracefully
-- Keep responses concise - just acknowledge and move to the next question
-- Do NOT provide feedback on answers during the interview
-- Do NOT answer questions about the interview process or your nature as an AI
-
-The candidate's resume and job description have been provided to generate relevant questions.`;
+- Do NOT rephrase or summarize the question — say it exactly as given
+- If the candidate asks you to repeat, repeat the exact same question
+- Keep responses concise — acknowledge briefly, ask the question, then stop
+- Do NOT provide feedback on answers during the interview`;
   }
 
   sendToBrowser(data) {
