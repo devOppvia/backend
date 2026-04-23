@@ -128,9 +128,35 @@ class InterviewXSession {
     // Log all events including audio for debugging
     console.log(`[Interview ${this.interviewId}] X AI event: ${event.type}`, JSON.stringify(event).substring(0, 200));
 
+    // Debug: log exact event type before switch
+    console.log(`[Interview ${this.interviewId}] About to switch on type: "${event.type}"`);
+
     switch (event.type) {
       case 'session.created':
         console.log(`[Interview ${this.interviewId}] Session created, voice: ${event.session?.voice}`);
+        // Send session.update immediately after session.created
+        const instructions = this.buildInterviewInstructions(this.currentQuestion?.questionText || '');
+        this.xaiWs.send(JSON.stringify({
+          type: 'session.update',
+          session: {
+            modalities: ['audio', 'text'],
+            instructions: instructions,
+            voice: this.voice,
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 700,
+            },
+            input_audio_transcription: {
+              model: 'grok-2-mini',
+              language: 'en',
+            },
+          },
+        }));
+        console.log(`[Interview ${this.interviewId}] Sent session.update after session.created`);
         break;
 
       case 'session.updated':
@@ -147,12 +173,15 @@ class InterviewXSession {
 
       case 'response.output_audio.delta':
         // Forward audio to browser
+        console.log(`[Interview ${this.interviewId}] Audio delta case matched, delta:`, event.delta ? `length ${event.delta.length}` : 'MISSING/EMPTY');
         if (event.delta) {
           console.log(`[Interview ${this.interviewId}] Forwarding audio chunk to browser, length: ${event.delta.length}`);
           this.sendToBrowser({
             type: 'audio',
             data: event.delta,
           });
+        } else {
+          console.warn(`[Interview ${this.interviewId}] Audio delta is empty!`);
         }
         break;
 
