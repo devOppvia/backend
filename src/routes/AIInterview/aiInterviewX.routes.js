@@ -12,7 +12,7 @@ router.post("/:id/complete", authMiddleware, aiInterviewXController.completeInte
 router.get("/:id/status", authMiddleware, aiInterviewXController.getInterviewStatus);
 router.post("/:id/expression", authMiddleware, aiInterviewXController.saveExpression);
 
-// ── Results (reuse existing result controller) ────────────────────────────────
+// ── Results (reuse existing result controller) 
 router.get("/my/history", authMiddleware, aiInterviewResultController.getHistory);
 router.get("/my/stats", authMiddleware, aiInterviewResultController.getStats);
 router.get("/:id/result", authMiddleware, aiInterviewResultController.getResult);
