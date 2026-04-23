@@ -105,7 +105,12 @@ class InterviewXSession {
     switch (event.type) {
       case 'session.created':
         console.log(`[Interview ${this.interviewId}] Session created, voice: ${event.session?.voice}`);
-        // Send session.update immediately after session.created
+        // Handled same as conversation.created below
+        break;
+
+      case 'conversation.created':
+        console.log(`[Interview ${this.interviewId}] Conversation created, sending session.update...`);
+        // Send session.update to configure the session
         const instructions = this.buildInterviewInstructions(this.currentQuestion?.questionText || '');
         this.xaiWs.send(JSON.stringify({
           type: 'session.update',
@@ -127,7 +132,7 @@ class InterviewXSession {
             },
           },
         }));
-        console.log(`[Interview ${this.interviewId}] Sent session.update after session.created`);
+        console.log(`[Interview ${this.interviewId}] Sent session.update after conversation.created`);
         break;
 
       case 'session.updated':
