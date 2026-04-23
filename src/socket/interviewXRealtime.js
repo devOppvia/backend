@@ -42,8 +42,8 @@ class InterviewXSession {
     this.interview = interviewData;
     this.totalQuestions = interviewData.totalQuestions || 8;
     this.maxDuration = interviewData.duration || 15;
-    // this.voice = interviewData.interviewerPreference === 'FEMALE' ? 'eve' : 'rex';
-    this.voice = 'eve';
+    this.voice = interviewData.interviewerPreference === 'FEMALE' ? 'eve' : 'rex';
+    // this.voice = 'eve';
 
     // Load first question from database
     const firstQuestion = await prisma.aIInterviewQuestion.findFirst({
@@ -163,12 +163,13 @@ class InterviewXSession {
 
       case 'response.output_audio.delta':
         // Forward audio to browser
-        console.log(`[Interview ${this.interviewId}] Audio delta case matched, delta:`, event.delta ? `length ${event.delta.length}` : 'MISSING/EMPTY');
+        console.log(`[Interview ${this.interviewId}] Audio delta case matched, delta:`, event.delta ? `length ${event.delta.length}` : 'MISSING/EMPTY', 'response_id:', event.response_id);
         if (event.delta) {
-          console.log(`[Interview ${this.interviewId}] Forwarding audio chunk to browser, length: ${event.delta.length}`);
+          console.log(`[Interview ${this.interviewId}] Forwarding audio chunk to browser, length: ${event.delta.length}, response_id: ${event.response_id}`);
           this.sendToBrowser({
             type: 'audio',
             data: event.delta,
+            responseId: event.response_id, // Include response ID so frontend can track streams
           });
         } else {
           console.warn(`[Interview ${this.interviewId}] Audio delta is empty!`);
@@ -617,8 +618,10 @@ exports.startInterviewRealtimeServer = (server) => {
       existingSession.browserWs = browserWs;
       // Re-send session_ready so the client re-initialises audio
       existingSession.sendToBrowser({ type: 'session_ready' });
-      // If the X AI session is ACTIVE and has already started, re-trigger the question
+      // Cancel any in-progress X AI response before creating a new one to prevent
+      // two simultaneous audio streams playing at the same time on the client
       if (existingSession.state === 'ACTIVE' && existingSession.xaiWs?.readyState === WebSocket.OPEN) {
+        existingSession.xaiWs.send(JSON.stringify({ type: 'response.cancel' }));
         existingSession.xaiWs.send(JSON.stringify({
           type: 'response.create',
           response: { modalities: ['audio', 'text'] }
