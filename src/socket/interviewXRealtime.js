@@ -4,6 +4,12 @@ require("dotenv").config();
 const prisma = require("../config/database");
 const geminiService = require("../services/AIInterview/geminiService");
 
+// Check for XAI_API_KEY
+if (!process.env.XAI_API_KEY) {
+  console.error("[X AI] ERROR: XAI_API_KEY environment variable is not set!");
+  console.error("[X AI] Please set XAI_API_KEY in your .env file");
+}
+
 // ─── In-memory store for active interview sessions ──────────────────────────
 // Key: interviewId → InterviewXSession
 const interviewSessions = new Map();
@@ -63,9 +69,12 @@ class InterviewXSession {
 
     this.xaiWs.on('open', () => {
       console.log(`[Interview ${this.interviewId}] X AI WebSocket OPEN`);
+      console.log(`[Interview ${this.interviewId}] Using voice: ${this.voice}`);
+      console.log(`[Interview ${this.interviewId}] First question: ${firstQuestionText?.substring(0, 50)}...`);
       
       // Build instructions with first question embedded
       const instructions = this.buildInterviewInstructions(firstQuestionText);
+      console.log(`[Interview ${this.interviewId}] Instructions length: ${instructions.length} chars`);
       
       // Send session configuration
       const sessionMsg = {
@@ -89,6 +98,7 @@ class InterviewXSession {
         },
       };
       
+      console.log(`[Interview ${this.interviewId}] Sending session.update...`);
       this.xaiWs.send(JSON.stringify(sessionMsg));
     });
 
@@ -115,11 +125,8 @@ class InterviewXSession {
   }
 
   handleXAIMessage(event) {
-    // Log non-audio events
-    if (event.type !== 'response.output_audio.delta' && 
-        event.type !== 'input_audio_buffer.append') {
-      console.log(`[Interview ${this.interviewId}] X AI event: ${event.type}`);
-    }
+    // Log all events including audio for debugging
+    console.log(`[Interview ${this.interviewId}] X AI event: ${event.type}`, JSON.stringify(event).substring(0, 200));
 
     switch (event.type) {
       case 'session.created':
@@ -127,19 +134,21 @@ class InterviewXSession {
         break;
 
       case 'session.updated':
-        console.log(`[Interview ${this.interviewId}] Session updated`);
+        console.log(`[Interview ${this.interviewId}] Session updated, sending response.create...`);
         this.state = 'ACTIVE';
         // Start the conversation
         this.xaiWs.send(JSON.stringify({
           type: 'response.create',
           response: { modalities: ['audio', 'text'] }
         }));
+        console.log(`[Interview ${this.interviewId}] response.create sent, notifying browser session_ready`);
         this.sendToBrowser({ type: 'session_ready' });
         break;
 
       case 'response.audio.delta':
         // Forward audio to browser
         if (event.delta) {
+          console.log(`[Interview ${this.interviewId}] Forwarding audio chunk to browser, length: ${event.delta.length}`);
           this.sendToBrowser({
             type: 'audio',
             data: event.delta,
