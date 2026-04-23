@@ -3,7 +3,7 @@ const prisma = require("../../config/database");
 const aiInterviewService = require("../../services/AIInterview/aiInterview.service");
 const internSubscriptionService = require("../../services/InternSubscription/internSubscription.service");
 const geminiService = require("../../services/AIInterview/geminiService");
-const { reconnectSession } = require("../../socket/interviewXRealtime");
+const { reconnectSession, getInterviewSession } = require("../../socket/interviewXRealtime");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,19 +98,36 @@ exports.startInterview = async (req, res) => {
       totalQuestions,
     });
 
-    // Generate Q1 using Gemini
+    // Generate ALL questions at once using Gemini
     const interviewWithTotal = { ...interview, totalQuestions };
-    const q1Result = await geminiService.generateFirstQuestion(interviewWithTotal, totalQuestions);
-
-    // Store Q1 in database
-    const q1 = await prisma.aIInterviewQuestion.create({
-      data: {
-        aiInterviewId: id,
-        questionNumber: 1,
-        questionText: q1Result.question,
-        skillTested: q1Result.skillTested,
-      },
+    console.log(`[Interview ${id}] Generating all ${totalQuestions} questions...`);
+    
+    const allQuestions = await geminiService.generateAllQuestions({
+      interview: interviewWithTotal,
+      totalQuestions,
     });
+    
+    console.log(`[Interview ${id}] Generated ${allQuestions.length} questions`);
+
+    // Store ALL questions in database
+    const createdQuestions = [];
+    for (let i = 0; i < allQuestions.length; i++) {
+      const q = allQuestions[i];
+      const created = await prisma.aIInterviewQuestion.create({
+        data: {
+          aiInterviewId: id,
+          questionNumber: i + 1,
+          questionText: q.question,
+          skillTested: q.skillTested,
+        },
+      });
+      createdQuestions.push({
+        ...created,
+        questionType: q.questionType,
+      });
+    }
+    
+    console.log(`[Interview ${id}] Stored all ${createdQuestions.length} questions in DB`);
 
     // Build WebSocket URL
     const wsUrl = buildWsUrl(id);
@@ -121,10 +138,10 @@ exports.startInterview = async (req, res) => {
         interviewId: id,
         totalQuestions,
         question: {
-          id: q1.id,
+          id: createdQuestions[0].id,
           questionNumber: 1,
-          questionText: q1.questionText,
-          questionType: q1Result.questionType,
+          questionText: createdQuestions[0].questionText,
+          questionType: createdQuestions[0].questionType,
         },
         wsUrl,
       },

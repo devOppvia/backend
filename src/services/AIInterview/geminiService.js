@@ -283,9 +283,77 @@ Return ONLY the JSON object, no markdown formatting.`;
   }
 }
 
+// ─── Generate ALL Questions at Once ───────────────────────────────────────────
+async function generateAllQuestions({ interview, totalQuestions }) {
+  const category = interview?.interviewCategory || "MIXED";
+  const questions = [];
+  
+  const prompt = `
+You are generating ALL ${totalQuestions} interview questions for a ${category} interview.
+
+Job Description: ${interview?.jobDescription || "Not provided"}
+Resume: ${interview?.resumeSnapshot || "Not provided"}
+Interview Category: ${category}
+Duration: ${interview?.duration || 15} minutes
+
+Generate ${totalQuestions} interview questions that:
+1. Cover different skills and topics
+2. Progress from general to specific
+3. Are appropriate for the candidate's experience level
+4. Take 1-2 minutes each to answer
+5. Test a variety of: technical skills, behavioral traits, situational judgment, culture fit
+
+Return ONLY a JSON array with ${totalQuestions} objects, each with this structure:
+[
+  {
+    "question": "The question text",
+    "questionType": "BEHAVIORAL|TECHNICAL|SITUATIONAL|CLOSING",
+    "skillTested": "specific skill"
+  },
+  ...
+]
+
+Return ONLY the JSON array, no markdown formatting.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are an expert technical interviewer. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+      response_format: { type: "json_object" },
+    });
+
+    const content = completion.choices[0].message.content;
+    const parsed = JSON.parse(content);
+    
+    // Handle both array and {questions: [...]} formats
+    const questionArray = Array.isArray(parsed) ? parsed : parsed.questions || [];
+    
+    // Validate and normalize
+    return questionArray.slice(0, totalQuestions).map((q, i) => ({
+      question: q.question || `Question ${i + 1}: Tell me about yourself.`,
+      questionType: q.questionType || "BEHAVIORAL",
+      skillTested: q.skillTested || "General",
+    }));
+  } catch (err) {
+    console.error("OpenAI batch generation error:", err);
+    // Return fallback questions
+    return Array.from({ length: totalQuestions }, (_, i) => ({
+      question: `Question ${i + 1}: Tell me about your relevant experience for this position.`,
+      questionType: i === 0 ? "OPENING" : i === totalQuestions - 1 ? "CLOSING" : "BEHAVIORAL",
+      skillTested: "Experience Assessment",
+    }));
+  }
+}
+
 module.exports = {
   scoreWithGemini,
   generateNextQuestionWithGemini,
   generateInsightsWithGemini,
   generateFirstQuestion,
+  generateAllQuestions,
 };

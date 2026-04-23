@@ -36,6 +36,8 @@ class InterviewXSession {
     this.startTime = Date.now();
     this.maxDuration = 0;              // in minutes
     this.voice = 'eve';
+    this.questions = [];               // ← Array of ALL pre-generated questions
+    this.currentQuestionIndex = 0;   // ← Track which question we're on
   }
 
   async init(interviewData) {
@@ -43,28 +45,32 @@ class InterviewXSession {
     this.totalQuestions = interviewData.totalQuestions || 8;
     this.maxDuration = interviewData.duration || 15;
     this.voice = interviewData.interviewerPreference === 'FEMALE' ? 'eve' : 'rex';
-    // this.voice = 'eve';
 
-    // Load first question from database
-    const firstQuestion = await prisma.aIInterviewQuestion.findFirst({
-      where: { aiInterviewId: this.interviewId, questionNumber: 1 },
+    // Load ALL pre-generated questions from database
+    this.questions = await prisma.aIInterviewQuestion.findMany({
+      where: { aiInterviewId: this.interviewId },
+      orderBy: { questionNumber: 'asc' },
     });
     
-    if (firstQuestion) {
-      this.currentQuestion = firstQuestion;
+    console.log(`[Interview ${this.interviewId}] Loaded ${this.questions.length} pre-generated questions from DB`);
+    
+    if (this.questions.length > 0) {
+      this.currentQuestionIndex = 0;
+      this.currentQuestion = this.questions[0];
       this.questionNumber = 1;
     }
     
     // Connect to X AI
-    await this.connectToXAI(firstQuestion?.questionText || '');
+    await this.connectToXAI();
   }
 
-  async connectToXAI(firstQuestionText) {
+  async connectToXAI() {
     console.log(`[Interview ${this.interviewId}] Connecting to X AI Realtime...`);
 
     // Flags to prevent duplicate sends
     this.hasSessionUpdateSent = false;
     this.hasResponseCreateSent = false;
+    this.hasSpokenInitialQuestion = false;
 
     this.xaiWs = new WebSocket('wss://api.x.ai/v1/realtime', {
       headers: {
@@ -150,14 +156,13 @@ class InterviewXSession {
           break;
         }
         this.hasResponseCreateSent = true;
-        console.log(`[Interview ${this.interviewId}] Session updated, sending response.create...`);
+        console.log(`[Interview ${this.interviewId}] Session updated, speaking first question...`);
         this.state = 'ACTIVE';
-        // Start the conversation
-        this.xaiWs.send(JSON.stringify({
-          type: 'response.create',
-          response: { modalities: ['audio', 'text'] }
-        }));
-        console.log(`[Interview ${this.interviewId}] response.create sent, notifying browser session_ready`);
+        
+        // Speak the first question verbatim using conversation.item.create
+        this.speakCurrentQuestion();
+        
+        console.log(`[Interview ${this.interviewId}] Notifying browser session_ready`);
         this.sendToBrowser({ type: 'session_ready' });
         break;
 
@@ -282,7 +287,14 @@ class InterviewXSession {
         feedback: scoreResult.feedback,
       });
 
-      // 4. Check if interview should end
+      // 4. Add to conversation history
+      this.conversationHistory.push({
+        question: this.currentQuestion.questionText,
+        answer: transcript,
+        score: scoreResult.score,
+      });
+
+      // 5. Check if interview should end
       if (this.questionNumber >= this.totalQuestions) {
         await this.endInterview();
         return;
@@ -296,55 +308,16 @@ class InterviewXSession {
         return;
       }
 
-      // 5. Generate next question with Gemini
-      this.questionNumber++;
-      const nextQ = await geminiService.generateNextQuestionWithGemini({
-        interview: this.interview,
-        history: this.conversationHistory,
-        questionNumber: this.questionNumber,
-        totalQuestions: this.totalQuestions,
-      });
+      // 6. Move to next pre-generated question
+      this.currentQuestionIndex++;
+      this.currentQuestion = this.questions[this.currentQuestionIndex];
+      this.questionNumber = this.currentQuestionIndex + 1;
 
-      // 6. Store new question
-      const newQuestion = await prisma.aIInterviewQuestion.create({
-        data: {
-          aiInterviewId: this.interviewId,
-          questionNumber: this.questionNumber,
-          questionText: nextQ.question,
-          skillTested: nextQ.skillTested,
-        },
-      });
+      console.log(`[Interview ${this.interviewId}] Moving to question ${this.questionNumber} of ${this.totalQuestions}`);
 
-      this.currentQuestion = newQuestion;
-
-      // 7. Add to conversation history
-      this.conversationHistory.push({
-        question: this.currentQuestion.questionText,
-        answer: transcript,
-        score: scoreResult.score,
-      });
-
-      // 8. Send to X AI to speak the next question
+      // 7. Speak next question verbatim
       this.state = 'SCORING_COMPLETE';
-      this.sendToBrowser({
-        type: 'question_update',
-        question: nextQ.question,
-        questionNumber: this.questionNumber,
-        totalQuestions: this.totalQuestions,
-      });
-
-      // Update X AI instructions to speak the exact next question verbatim, then generate response
-      // Using session.update instead of conversation.item.create so X AI speaks exact text not a rephrased version
-      this.xaiWs.send(JSON.stringify({
-        type: 'session.update',
-        session: {
-          instructions: this.buildInterviewInstructions(nextQ.question, {
-            isSubsequentQuestion: true,
-            questionNumber: this.questionNumber,
-          }),
-        },
-      }));
-      this.xaiWs.send(JSON.stringify({ type: 'response.create' }));
+      this.speakCurrentQuestion();
 
     } catch (err) {
       console.error(`[Interview ${this.interviewId}] Scoring error:`, err);
@@ -508,6 +481,45 @@ IMPORTANT RULES:
 - If the candidate asks you to repeat, repeat the exact same question
 - Keep responses concise — acknowledge briefly, ask the question, then stop
 - Do NOT provide feedback on answers during the interview`;
+  }
+
+  // ─── Speak Current Question Verbatim ──────────────────────────────────────
+  speakCurrentQuestion() {
+    const question = this.currentQuestion?.questionText;
+    if (!question) {
+      console.error(`[Interview ${this.interviewId}] No question to speak!`);
+      return;
+    }
+
+    console.log(`[Interview ${this.interviewId}] Speaking question ${this.questionNumber}: "${question.substring(0, 50)}..."`);
+
+    // ✅ Use conversation.item.create to force verbatim speech
+    // This tells X AI: "The assistant already said this text, now speak it out loud"
+    this.xaiWs.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'message',
+        role: 'assistant',
+        content: [{
+          type: 'input_text',
+          text: question,  // EXACT text from Gemini - no rephrasing!
+        }],
+      },
+    }));
+
+    // Generate response (audio) for this text
+    this.xaiWs.send(JSON.stringify({
+      type: 'response.create',
+      response: { modalities: ['audio', 'text'] }
+    }));
+
+    // Notify frontend with the exact question text
+    this.sendToBrowser({
+      type: 'question_update',
+      question: question,
+      questionNumber: this.questionNumber,
+      totalQuestions: this.totalQuestions,
+    });
   }
 
   sendToBrowser(data) {
