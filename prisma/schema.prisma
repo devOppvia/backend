@@ -896,6 +896,7 @@ model AIInterviewQuestion {
   aiInterviewId  String
   questionNumber Int
   questionText   String
+  questionType   String?  // BEHAVIORAL, TECHNICAL, SITUATIONAL, CLOSING
   answerText     String?
   answerScore    Float?   // 0-10
   starUsed       Boolean  @default(false)

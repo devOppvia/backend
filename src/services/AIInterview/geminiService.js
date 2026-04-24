@@ -350,10 +350,96 @@ Return ONLY the JSON array, no markdown formatting.`;
   }
 }
 
+// ─── Generate Question for Specific Type (V2 API) ────────────────────────────
+async function generateQuestionForType({
+  interview,
+  questionNumber,
+  totalQuestions,
+  questionType,
+  previousQuestions,
+}) {
+  const previousText = previousQuestions?.length
+    ? previousQuestions.map((q, i) => `${i + 1}. [${q.questionType || 'UNKNOWN'}] ${q.question}`).join("\n")
+    : "None";
+
+  const category = interview?.interviewCategory || "MIXED";
+  const jd = interview?.jobDescription || "Not provided";
+  const resume = interview?.resumeSnapshot || "Not provided";
+
+  const prompt = `
+You are an expert technical interviewer generating question ${questionNumber} of ${totalQuestions}.
+
+INTERVIEW CONTEXT:
+- Category: ${category}
+- This Question Type: ${questionType}
+- Job Description: ${jd}
+- Resume: ${resume}
+
+PREVIOUS QUESTIONS ASKED:
+${previousText}
+
+YOUR TASK:
+Generate a ${questionType} interview question that:
+1. Is appropriate for a ${questionType.toLowerCase()} interview
+2. Tests different skills than previous questions
+3. Matches the candidate's experience level from their resume
+4. Is clear, specific, and professional
+5. Takes 2-3 minutes to answer adequately
+
+${questionType === 'BEHAVIORAL' ? 'Focus on past experiences using the STAR method (Situation, Task, Action, Result).' : ''}
+${questionType === 'TECHNICAL' ? 'Focus on technical knowledge, problem-solving, or coding concepts relevant to the job.' : ''}
+${questionType === 'SITUATIONAL' ? 'Present a hypothetical scenario and ask how they would handle it.' : ''}
+${questionType === 'CLOSING' ? 'Ask about their interest, questions for the interviewer, or next steps.' : ''}
+
+Return ONLY a JSON object:
+{
+  "question": "The complete question text",
+  "skillTested": "Specific skill being assessed (e.g., Leadership, React, Communication)"
+}
+`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are an expert technical interviewer. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+      response_format: { type: "json_object" },
+    });
+
+    const text = completion.choices[0].message.content;
+    const parsed = JSON.parse(text);
+
+    return {
+      question: parsed.question || "Tell me about yourself.",
+      questionType,
+      skillTested: parsed.skillTested || questionType,
+    };
+  } catch (err) {
+    console.error("Question generation error:", err);
+    // Fallback questions by type
+    const fallbacks = {
+      BEHAVIORAL: "Tell me about a time you faced a challenging situation at work. How did you handle it?",
+      TECHNICAL: "Explain a complex technical concept you're familiar with as if teaching a junior developer.",
+      SITUATIONAL: "How would you handle a situation where you disagree with your team's technical approach?",
+      CLOSING: "Do you have any questions about the role or our company?",
+    };
+    return {
+      question: fallbacks[questionType] || fallbacks.BEHAVIORAL,
+      questionType,
+      skillTested: questionType,
+    };
+  }
+}
+
 module.exports = {
   scoreWithGemini,
   generateNextQuestionWithGemini,
   generateInsightsWithGemini,
   generateFirstQuestion,
   generateAllQuestions,
+  generateQuestionForType,
 };
