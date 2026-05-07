@@ -281,6 +281,7 @@ exports.speechToText = async (req, res) => {
 // ─── POST /ai-interview/:id/answer ────────────────────────────────────────────
 exports.submitAnswer = async (req, res) => {
   try {
+    console.log("this is function is called : ")
     const internId = req.user.id;
     const { id } = req.params;
     const { questionId, transcript, emotionData } = req.body;
