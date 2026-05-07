@@ -285,8 +285,9 @@ exports.submitAnswer = async (req, res) => {
     const { id } = req.params;
     const { questionId, transcript, emotionData } = req.body;
 
-    if (!questionId || !transcript)
+    if (!questionId || !transcript) {
       return errorResponse(res, "questionId and transcript are required", 400);
+    }
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
@@ -356,7 +357,7 @@ exports.submitAnswer = async (req, res) => {
       200,
     );
   } catch (error) {
-    console.error("Submit answer error:", error);
+    console.log("Submit answer error:", error);
     return errorResponse(res, "Failed to process answer", 500);
   }
 };
