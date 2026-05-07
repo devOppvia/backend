@@ -1,6 +1,7 @@
 const { ElevenLabsClient } = require("@elevenlabs/elevenlabs-js");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 const client = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
 
@@ -65,20 +66,26 @@ function serveCachedAudio({ interviewId, questionNumber, res }) {
 
 // ─── Speech to Text ───────────────────────────────────────────────────────────
 // Uses ElevenLabs Scribe v1 for transcription.
-// audioBuffer: Buffer from multer memory storage.
-// mimeType: the uploaded file's MIME type (audio/webm, audio/mp3, etc.)
+// Writes audio to a temp file so the SDK receives a proper named ReadableStream.
 async function speechToText({ audioBuffer, mimeType }) {
-  const blob = new Blob([audioBuffer], { type: mimeType || "audio/webm" });
+  const ext = mimeType?.includes("mp3") ? "mp3" : "webm";
+  const tmpPath = path.join(os.tmpdir(), `stt-${Date.now()}.${ext}`);
 
-  const result = await client.speechToText.convert({
-    audio: blob,
-    model_id: "scribe_v1",
-  });
+  try {
+    fs.writeFileSync(tmpPath, audioBuffer);
 
-  return {
-    transcript: result.text || "",
-    language: result.language_code || "en",
-  };
+    const result = await client.speechToText.convert({
+      audio: fs.createReadStream(tmpPath),
+      model_id: "scribe_v1",
+    });
+
+    return {
+      transcript: result.text || "",
+      language: result.languageCode || "en",
+    };
+  } finally {
+    try { fs.unlinkSync(tmpPath); } catch { /* non-critical */ }
+  }
 }
 
 // ─── Delete cached audio for an interview (cleanup) ──────────────────────────
