@@ -285,8 +285,12 @@ exports.submitAnswer = async (req, res) => {
     const internId = req.user.id;
     const { id } = req.params;
     const { questionId, transcript, emotionData } = req.body;
+   console.log(" questionId : ", questionId);
+      console.log(" transcript : ", transcript);
+         console.log(" emotionData : ", emotionData);
 
     if (!questionId || !transcript) {
+      console.log("questionId and transcript are required");
       return errorResponse(res, "questionId and transcript are required", 400);
     }
     console.log("log 2 : check function")
