@@ -77,7 +77,7 @@ async function speechToText({ audioBuffer, mimeType }) {
     : "webm";
 
   const form = new FormData();
-  form.append("audio", audioBuffer, {
+  form.append("file", audioBuffer, {
     filename: `audio.${ext}`,
     contentType: baseType,
   });
