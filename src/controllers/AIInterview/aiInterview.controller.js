@@ -14,11 +14,11 @@ const QUESTION_ROTATION = [
 ];
 
 const getQuestionCount = (durationMins) => {
-  if (durationMins == 15) return 10;
-  if (durationMins == 30) return 15;
-  if (durationMins == 45) return 25;
-  if (durationMins == 60) return 30;
-  return 10;
+  if (durationMins == 15) return 5;
+  if (durationMins == 30) return 7;
+  if (durationMins == 45) return 9;
+  if (durationMins == 60) return 10;
+  return 5;
 };
 
 const getQuestionType = (questionNumber, interviewCategory) => {

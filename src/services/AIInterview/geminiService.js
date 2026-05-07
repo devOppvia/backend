@@ -94,13 +94,12 @@ ${forcedType ? `FOR THIS QUESTION: Generate a ${forcedType} type question.` : ""
 Generate a ${category.toLowerCase()} interview question that:
 - Tests different skills than previous questions
 - Is appropriate for the candidate's experience level
-- Follows logically from previous answers if relevant
-- Is clear, specific, and professional
-- Takes 2-3 minutes to answer adequately
+- Is concise — ONE sentence or TWO short sentences maximum, 20 words or fewer
+- Is direct and conversational, as if asked face-to-face
 
 Return ONLY a JSON object with this exact structure:
 {
-  "question": "The question text - be specific and clear",
+  "question": "The question text — short and direct",
   "questionType": "${forcedType || "BEHAVIORAL|TECHNICAL|SITUATIONAL|CLOSING"}",
   "skillTested": "specific skill being assessed (e.g., Leadership, Problem Solving, React, Communication)"
 }
@@ -115,7 +114,7 @@ Return ONLY the JSON object, no markdown formatting.`;
         { role: "user", content: prompt }
       ],
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 150,
       response_format: { type: "json_object" },
     });
 
@@ -261,7 +260,7 @@ Return ONLY the JSON object, no markdown formatting.`;
         { role: "user", content: prompt }
       ],
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 150,
       response_format: { type: "json_object" },
     });
 
@@ -383,17 +382,19 @@ Generate a ${questionType} interview question that:
 1. Is appropriate for a ${questionType.toLowerCase()} interview
 2. Tests different skills than previous questions
 3. Matches the candidate's experience level from their resume
-4. Is clear, specific, and professional
-5. Takes 2-3 minutes to answer adequately
+4. Is concise — ONE sentence or TWO short sentences maximum
+5. Is direct and conversational, as if asked face-to-face by a human interviewer
 
-${questionType === 'BEHAVIORAL' ? 'Focus on past experiences using the STAR method (Situation, Task, Action, Result).' : ''}
-${questionType === 'TECHNICAL' ? 'Focus on technical knowledge, problem-solving, or coding concepts relevant to the job.' : ''}
-${questionType === 'SITUATIONAL' ? 'Present a hypothetical scenario and ask how they would handle it.' : ''}
-${questionType === 'CLOSING' ? 'Ask about their interest, questions for the interviewer, or next steps.' : ''}
+STRICT LENGTH RULE: The question must be 20 words or fewer. No long setups, no multi-part questions, no preamble.
+
+${questionType === 'BEHAVIORAL' ? 'Start with "Tell me about a time..." or "Describe a situation where..."' : ''}
+${questionType === 'TECHNICAL' ? 'Ask about one specific concept, tool, or approach. Keep it focused.' : ''}
+${questionType === 'SITUATIONAL' ? 'Describe the scenario in one short sentence, then ask what they would do.' : ''}
+${questionType === 'CLOSING' ? 'Ask one simple closing question about their interest or availability.' : ''}
 
 Return ONLY a JSON object:
 {
-  "question": "The complete question text",
+  "question": "The question text — short and direct",
   "skillTested": "Specific skill being assessed (e.g., Leadership, React, Communication)"
 }
 `;
@@ -406,7 +407,7 @@ Return ONLY a JSON object:
         { role: "user", content: prompt }
       ],
       temperature: 0.7,
-      max_tokens: 500,
+      max_tokens: 150,
       response_format: { type: "json_object" },
     });
 
