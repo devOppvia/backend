@@ -69,30 +69,40 @@ function serveCachedAudio({ interviewId, questionNumber, res }) {
 // Uses ElevenLabs Scribe v1 via direct HTTP (axios + form-data) to avoid
 // SDK stream-handling issues with Buffer inputs in Node.js.
 async function speechToText({ audioBuffer, mimeType }) {
-  const ext = mimeType?.includes("mp3") ? "mp3" : "webm";
+  // Strip codec suffix — ElevenLabs only accepts the base MIME type
+  const baseType = (mimeType || "audio/webm").split(";")[0].trim();
+  const ext = baseType.includes("mp3") ? "mp3"
+    : baseType.includes("wav") ? "wav"
+    : baseType.includes("mp4") || baseType.includes("m4a") ? "mp4"
+    : "webm";
 
   const form = new FormData();
   form.append("audio", audioBuffer, {
     filename: `audio.${ext}`,
-    contentType: mimeType || "audio/webm",
+    contentType: baseType,
   });
   form.append("model_id", "scribe_v1");
 
-  const response = await axios.post(
-    "https://api.elevenlabs.io/v1/speech-to-text",
-    form,
-    {
-      headers: {
-        "xi-api-key": process.env.ELEVENLABS_API_KEY,
-        ...form.getHeaders(),
+  try {
+    const response = await axios.post(
+      "https://api.elevenlabs.io/v1/speech-to-text",
+      form,
+      {
+        headers: {
+          "xi-api-key": process.env.ELEVENLABS_API_KEY,
+          ...form.getHeaders(),
+        },
       },
-    },
-  );
+    );
 
-  return {
-    transcript: response.data.text || "",
-    language: response.data.language_code || "en",
-  };
+    return {
+      transcript: response.data.text || "",
+      language: response.data.language_code || "en",
+    };
+  } catch (err) {
+    console.error("ElevenLabs STT 400 body:", err.response?.data);
+    throw err;
+  }
 }
 
 // ─── Delete cached audio for an interview (cleanup) ──────────────────────────
