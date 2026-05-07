@@ -17,20 +17,15 @@ const getCachePath = (interviewId, questionNumber) =>
   path.join(AUDIO_DIR, `${interviewId}_q${questionNumber}.mp3`);
 
 // ─── Text to Speech ───────────────────────────────────────────────────────────
-// Streams audio from ElevenLabs directly to the HTTP response while
-// simultaneously writing it to disk for instant replay later.
-// If a cached file already exists, serves from disk immediately.
+// Always generates fresh audio from ElevenLabs (guarantees the spoken text
+// matches what's displayed, even if the same questionNumber was asked before
+// with different AI-generated text). Simultaneously writes to disk so that
+// the replay endpoint can serve it instantly without a second API call.
 async function textToSpeech({ text, interviewId, questionNumber, res }) {
   const cachePath = getCachePath(interviewId, questionNumber);
 
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Cache-Control", "no-cache");
-
-  // Serve from cache if already generated
-  if (fs.existsSync(cachePath)) {
-    fs.createReadStream(cachePath).pipe(res);
-    return;
-  }
 
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
 
@@ -40,6 +35,7 @@ async function textToSpeech({ text, interviewId, questionNumber, res }) {
     output_format: "mp3_44100_128",
   });
 
+  // Overwrite any stale cache file for this question number
   const fileStream = fs.createWriteStream(cachePath);
 
   // Pipe each chunk to response and to file simultaneously
