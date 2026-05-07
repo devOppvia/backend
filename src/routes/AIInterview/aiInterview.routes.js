@@ -1,35 +1,37 @@
 const express = require("express");
 const router = express.Router();
-const authMiddleware = require("../../middlewares/authMiddleware");
-const aiInterviewController = require("../../controllers/AIInterview/aiInterview.controller");
-const aiInterviewResultController = require("../../controllers/AIInterview/aiInterviewResult.controller");
 const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
-// ── History & stats (must come before /:id to avoid param conflicts) ──────────
-router.get("/my/history", authMiddleware, aiInterviewResultController.getHistory);
-router.get("/my/stats", authMiddleware, aiInterviewResultController.getStats);
+const authMiddleware = require("../../middlewares/authMiddleware");
+const controller = require("../../controllers/AIInterview/aiInterview.controller");
+const resultController = require("../../controllers/AIInterview/aiInterviewResult.controller");
 
-// ── Setup & session lifecycle ─────────────────────────────────────────────────
-router.post("/create", authMiddleware, aiInterviewController.createInterview);
-router.post("/:id/start", authMiddleware, aiInterviewController.startInterview);
-router.get("/:id/resume", authMiddleware, aiInterviewController.resumeInterview);
-router.post("/:id/answer", authMiddleware, aiInterviewController.submitAnswer);
-router.post("/:id/complete", authMiddleware, aiInterviewController.completeInterview);
-router.post("/:id/expression", authMiddleware, aiInterviewController.saveExpression);
+const upload = multer({ storage: multer.memoryStorage() });
 
-// ── Results ───────────────────────────────────────────────────────────────────
-router.get("/:id/result", authMiddleware, aiInterviewResultController.getResult);
-router.get("/:id/questions", authMiddleware, aiInterviewResultController.getQuestions);
-router.get("/:id/expressions", authMiddleware, aiInterviewResultController.getExpressions);
+// ─── Interview Lifecycle ──────────────────────────────────────────────────────
+router.post("/create", authMiddleware, controller.createInterview);
+router.post("/:id/start", authMiddleware, controller.startInterview);
+router.get("/:id/next-question", authMiddleware, controller.getNextQuestion);
 
-// ── Detail (after specific paths) ────────────────────────────────────────────
-router.get("/:id", authMiddleware, aiInterviewResultController.getInterviewDetail);
+// TTS — streams audio/mpeg directly; also writes to disk cache
+router.post("/:id/tts", authMiddleware, controller.textToSpeech);
 
-router.post(
-  "/transcribe",
-  authMiddleware,
-  upload.single("audio"),
-  aiInterviewController.transcribe,
-);
+// Replay — serves cached audio for "repeat question" without re-generating
+router.get("/:id/audio/:questionNumber", authMiddleware, controller.replayAudio);
+
+// STT — multipart audio file → transcript via ElevenLabs Scribe
+router.post("/:id/stt", authMiddleware, upload.single("audio"), controller.speechToText);
+
+router.post("/:id/answer", authMiddleware, controller.submitAnswer);
+router.post("/:id/expression", authMiddleware, controller.submitExpression);
+router.post("/:id/complete", authMiddleware, controller.completeInterview);
+
+// ─── Results & History ────────────────────────────────────────────────────────
+router.get("/my/history", authMiddleware, resultController.getHistory);
+router.get("/my/stats", authMiddleware, resultController.getStats);
+router.get("/download-pdf/:id", authMiddleware, resultController.downloadPdf);
+router.get("/:id/result", authMiddleware, resultController.getResult);
+router.get("/:id/questions", authMiddleware, resultController.getQuestions);
+router.get("/:id/expressions", authMiddleware, resultController.getExpressions);
+router.get("/:id", authMiddleware, resultController.getInterviewDetail);
 
 module.exports = router;

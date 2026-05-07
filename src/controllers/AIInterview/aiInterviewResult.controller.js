@@ -111,3 +111,20 @@ exports.getExpressions = async (req, res) => {
     return errorResponse(res, "Internal server error", 500);
   }
 };
+
+// ─── GET /ai-interview/download-pdf/:id ──────────────────────────────────────
+
+exports.downloadPdf = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const { id } = req.params;
+
+    const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
+    if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (!interview.reportPdfPath) return errorResponse(res, "PDF not available", 404);
+
+    return successResponse(res, { pdfUrl: interview.reportPdfPath }, "PDF URL fetched", 200);
+  } catch (error) {
+    return errorResponse(res, "Internal server error", 500);
+  }
+};

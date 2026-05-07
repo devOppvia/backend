@@ -1,0 +1,96 @@
+const { ElevenLabsClient } = require("@elevenlabs/elevenlabs-js");
+const fs = require("fs");
+const path = require("path");
+
+const client = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
+
+const AUDIO_DIR = path.join(process.cwd(), "uploads", "ai_interview_audio");
+
+// Ensure audio cache directory exists
+if (!fs.existsSync(AUDIO_DIR)) {
+  fs.mkdirSync(AUDIO_DIR, { recursive: true });
+}
+
+const getCachePath = (interviewId, questionNumber) =>
+  path.join(AUDIO_DIR, `${interviewId}_q${questionNumber}.mp3`);
+
+// ─── Text to Speech ───────────────────────────────────────────────────────────
+// Streams audio from ElevenLabs directly to the HTTP response while
+// simultaneously writing it to disk for instant replay later.
+// If a cached file already exists, serves from disk immediately.
+async function textToSpeech({ text, interviewId, questionNumber, res }) {
+  const cachePath = getCachePath(interviewId, questionNumber);
+
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.setHeader("Cache-Control", "no-cache");
+
+  // Serve from cache if already generated
+  if (fs.existsSync(cachePath)) {
+    fs.createReadStream(cachePath).pipe(res);
+    return;
+  }
+
+  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+
+  const audioStream = await client.textToSpeech.convert(voiceId, {
+    text,
+    model_id: "eleven_turbo_v2_5",
+    output_format: "mp3_44100_128",
+  });
+
+  const fileStream = fs.createWriteStream(cachePath);
+
+  // Pipe each chunk to response and to file simultaneously
+  for await (const chunk of audioStream) {
+    res.write(chunk);
+    fileStream.write(chunk);
+  }
+
+  fileStream.end();
+  res.end();
+}
+
+// ─── Serve Cached Audio (replay) ─────────────────────────────────────────────
+// Returns false if cache miss so the controller can regenerate.
+function serveCachedAudio({ interviewId, questionNumber, res }) {
+  const cachePath = getCachePath(interviewId, questionNumber);
+
+  if (!fs.existsSync(cachePath)) return false;
+
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  fs.createReadStream(cachePath).pipe(res);
+  return true;
+}
+
+// ─── Speech to Text ───────────────────────────────────────────────────────────
+// Uses ElevenLabs Scribe v1 for transcription.
+// audioBuffer: Buffer from multer memory storage.
+// mimeType: the uploaded file's MIME type (audio/webm, audio/mp3, etc.)
+async function speechToText({ audioBuffer, mimeType }) {
+  const blob = new Blob([audioBuffer], { type: mimeType || "audio/webm" });
+
+  const result = await client.speechToText.convert({
+    audio: blob,
+    model_id: "scribe_v1",
+  });
+
+  return {
+    transcript: result.text || "",
+    language: result.language_code || "en",
+  };
+}
+
+// ─── Delete cached audio for an interview (cleanup) ──────────────────────────
+function clearInterviewAudioCache(interviewId) {
+  try {
+    const files = fs.readdirSync(AUDIO_DIR).filter((f) =>
+      f.startsWith(`${interviewId}_q`)
+    );
+    files.forEach((f) => fs.unlinkSync(path.join(AUDIO_DIR, f)));
+  } catch {
+    // Non-critical — ignore errors
+  }
+}
+
+module.exports = { textToSpeech, serveCachedAudio, speechToText, clearInterviewAudioCache };
