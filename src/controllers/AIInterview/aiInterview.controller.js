@@ -289,14 +289,17 @@ exports.submitAnswer = async (req, res) => {
     if (!questionId || !transcript) {
       return errorResponse(res, "questionId and transcript are required", 400);
     }
+    console.log("log 2 : check function")
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    console.log("log 3 : check function");
 
     const question = await prisma.aIInterviewQuestion.findFirst({
       where: { id: questionId, aiInterviewId: id },
     });
     if (!question) return errorResponse(res, "Question not found", 404);
+    console.log("log 4 : check function");
 
     await prisma.aIInterviewQuestion.update({
       where: { id: questionId },
@@ -314,6 +317,7 @@ exports.submitAnswer = async (req, res) => {
         })),
       });
     }
+    console.log("log 5: check function");
 
     const previousQuestions = await prisma.aIInterviewQuestion.findMany({
       where: { aiInterviewId: id, questionNumber: { lt: question.questionNumber } },
@@ -325,6 +329,8 @@ exports.submitAnswer = async (req, res) => {
       answer: q.answerText,
       score: q.answerScore,
     }));
+        console.log("log 6 : check function");
+
 
     const scoreResult = await geminiService.scoreWithGemini({
       question: question.questionText,
@@ -332,6 +338,9 @@ exports.submitAnswer = async (req, res) => {
       category: interview.interviewCategory,
       history,
     });
+
+        console.log("log 7 : check function");
+
 
     await prisma.aIInterviewQuestion.update({
       where: { id: questionId },
@@ -343,7 +352,12 @@ exports.submitAnswer = async (req, res) => {
       },
     });
 
+        console.log("log 8: check function");
+
+
     const isComplete = question.questionNumber >= interview.totalQuestions;
+
+        console.log("log 9 : check function");
 
     return successResponse(
       res,
