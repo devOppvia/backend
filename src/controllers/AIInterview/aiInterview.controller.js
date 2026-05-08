@@ -205,7 +205,7 @@ exports.textToSpeech = async (req, res) => {
   try {
     const internId = req.user.id;
     const { id } = req.params;
-    const { text, questionNumber } = req.body;
+    const { text, questionNumber, voice } = req.body;
 
     if (!text) return errorResponse(res, "Text is required", 400);
     if (!questionNumber) return errorResponse(res, "questionNumber is required", 400);
@@ -217,7 +217,7 @@ exports.textToSpeech = async (req, res) => {
       text,
       interviewId: id,
       questionNumber,
-      voicePreference: interview.voiceUsed,
+      voicePreference: voice || interview.voiceUsed,
       res,
     });
     // Response is handled inside elevenLabsService (streaming)
