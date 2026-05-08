@@ -21,13 +21,18 @@ const getCachePath = (interviewId, questionNumber) =>
 // matches what's displayed, even if the same questionNumber was asked before
 // with different AI-generated text). Simultaneously writes to disk so that
 // the replay endpoint can serve it instantly without a second API call.
-async function textToSpeech({ text, interviewId, questionNumber, res }) {
+async function textToSpeech({ text, interviewId, questionNumber, voicePreference, res }) {
   const cachePath = getCachePath(interviewId, questionNumber);
 
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Cache-Control", "no-cache");
 
-  const voiceId = process.env.ELEVENLABS_VOICE_ID;
+  const voiceId =
+    voicePreference === "rex"
+      ? process.env.ELEVENLABS_MALE_VOICE_ID || process.env.ELEVENLABS_VOICE_ID
+      : voicePreference === "eve"
+      ? process.env.ELEVENLABS_FEMALE_VOICE_ID || process.env.ELEVENLABS_VOICE_ID
+      : process.env.ELEVENLABS_VOICE_ID;
 
   const audioStream = await client.textToSpeech.convert(voiceId, {
     text,

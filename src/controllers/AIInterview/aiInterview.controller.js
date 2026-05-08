@@ -18,7 +18,7 @@ const getQuestionCount = (durationMins) => {
   if (durationMins == 30) return 7;
   if (durationMins == 45) return 9;
   if (durationMins == 60) return 10;
-  return 5;
+  return 5  ;
 };
 
 const getQuestionType = (questionNumber, interviewCategory) => {
@@ -217,6 +217,7 @@ exports.textToSpeech = async (req, res) => {
       text,
       interviewId: id,
       questionNumber,
+      voicePreference: interview.voiceUsed,
       res,
     });
     // Response is handled inside elevenLabsService (streaming)
