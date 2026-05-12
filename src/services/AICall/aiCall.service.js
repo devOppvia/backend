@@ -152,7 +152,7 @@ async function placeCallAttempt(aiCall) {
       body: JSON.stringify({
         from_number: process.env.RETELL_FROM_NUMBER,
         to_number: phone,
-        agent_id: process.env.RETELL_AGENT_ID,
+        override_agent_id: process.env.RETELL_AGENT_ID,
         metadata: { callId: aiCall.id, attemptId: attempt.id },
       }),
     },

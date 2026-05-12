@@ -70,12 +70,27 @@ app.use(
   }),
 );
 app.use(cookieParser());
-app.use(express.json({ limit: "50mb" }));
+app.use(
+  express.json({
+    limit: "50mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(morgan("dev"));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/" ,(req,res) => res.send("Hello....."))
+
+app.get("/retell-llm", (req, res) => {
+  res.status(426).json({
+    status: false,
+    message:
+      "Retell LLM endpoint is reachable. Configure Retell with wss://<this-domain>/retell-llm so it connects using WebSocket upgrade.",
+  });
+});
 
 app.use("/api/v1", routes);
 

@@ -60,15 +60,28 @@ exports.startRetellLLMServer = (server) => {
 
   server.on("upgrade", (request, socket, head) => {
     const pathname = new URL(request.url, "http://localhost").pathname;
-    if (pathname !== "/retell-llm") return;
+    if (pathname !== "/retell-llm" && !pathname.startsWith("/retell-llm/")) {
+      return;
+    }
+
+    console.log(
+      `🔌 [Retell LLM] Upgrade request received from ${request.socket.remoteAddress} path=${request.url}`,
+    );
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, request);
     });
   });
 
-  wss.on("connection", (ws) => {
-    console.log("🔌 [Retell LLM] New connection");
+  wss.on("connection", (ws, request) => {
+    const pathname = new URL(request.url, "http://localhost").pathname;
+    const retellCallIdFromPath = decodeURIComponent(
+      pathname.replace(/^\/retell-llm\/?/, ""),
+    );
+
+    console.log(
+      `🔌 [Retell LLM] New connection retellCallId=${retellCallIdFromPath || "unknown"}`,
+    );
 
     let callId = null;
     let attemptId = null;
@@ -77,16 +90,31 @@ exports.startRetellLLMServer = (server) => {
     let lastProcessedUserTurnIndex = -1;
     let silenceTimer = null;
     let silenceRetries = 0;
+    let currentResponseId = 0;
 
-    const sendResponse = (content, endCall = false) => {
+    const sendResponse = (content, endCall = false, responseId = currentResponseId) => {
       const payload = {
         response_type: "response",
+        response_id: responseId,
         content,
         content_complete: true,
+        end_call: endCall,
       };
 
-      if (endCall) payload.end_call = true;
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+    };
+
+    const sendConfig = () => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(
+        JSON.stringify({
+          response_type: "config",
+          config: {
+            auto_reconnect: true,
+            call_details: true,
+          },
+        }),
+      );
     };
 
     const clearSilenceTimer = () => {
@@ -199,7 +227,8 @@ exports.startRetellLLMServer = (server) => {
       );
     };
 
-    const handleResponseRequired = async (transcript) => {
+    const handleResponseRequired = async (transcript, responseId = 0) => {
+      currentResponseId = responseId;
       clearSilenceTimer();
 
       const aiCall = await prisma.aICall.findUnique({ where: { id: callId } });
@@ -327,7 +356,9 @@ exports.startRetellLLMServer = (server) => {
       try {
         const event = JSON.parse(raw.toString());
 
-        if (event.event_type === "ping_pong") {
+        const interactionType = event.interaction_type || event.event_type;
+
+        if (interactionType === "ping_pong") {
           ws.send(
             JSON.stringify({
               response_type: "ping_pong",
@@ -337,7 +368,7 @@ exports.startRetellLLMServer = (server) => {
           return;
         }
 
-        if (event.event_type === "call_details") {
+        if (interactionType === "call_details") {
           callId = event.call?.metadata?.callId;
           attemptId = event.call?.metadata?.attemptId;
 
@@ -362,8 +393,11 @@ exports.startRetellLLMServer = (server) => {
           return;
         }
 
-        if (event.event_type === "response_required") {
-          await handleResponseRequired(event.transcript || []);
+        if (
+          interactionType === "response_required" ||
+          interactionType === "reminder_required"
+        ) {
+          await handleResponseRequired(event.transcript || [], event.response_id);
         }
       } catch (err) {
         console.error("❌ [Retell LLM] Error:", err);
@@ -382,5 +416,8 @@ exports.startRetellLLMServer = (server) => {
         err.message,
       );
     });
+
+    sendConfig();
+    sendResponse("", false, 0);
   });
 };

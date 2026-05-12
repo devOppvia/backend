@@ -7,14 +7,27 @@ function verifyRetellSignature(req) {
   const signature = req.headers["x-retell-signature"];
   if (!signature || !process.env.RETELL_API_KEY) return false;
 
+  const match = /^v=(\d+),d=([a-fA-F0-9]+)$/.exec(signature);
+  if (!match) return false;
+
+  const [, timestamp, digest] = match;
+  const timestampMs = Number(timestamp);
+  if (!Number.isFinite(timestampMs)) return false;
+
+  const fiveMinutesMs = 5 * 60 * 1000;
+  if (Math.abs(Date.now() - timestampMs) > fiveMinutesMs) return false;
+
+  const rawBody =
+    typeof req.rawBody === "string" ? req.rawBody : JSON.stringify(req.body);
+
   const hmac = crypto.createHmac("sha256", process.env.RETELL_API_KEY);
-  hmac.update(JSON.stringify(req.body));
+  hmac.update(`${rawBody}${timestamp}`);
   const expected = hmac.digest("hex");
 
-  if (signature.length !== expected.length) return false;
+  if (digest.length !== expected.length) return false;
 
   return crypto.timingSafeEqual(
-    Buffer.from(signature, "hex"),
+    Buffer.from(digest, "hex"),
     Buffer.from(expected, "hex"),
   );
 }

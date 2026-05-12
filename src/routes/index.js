@@ -33,11 +33,13 @@ const interviewRoutes = require("./Internview/interview.routes")
 const aiInterviewRoutes = require("./AIInterview/aiInterview.routes")
 const internSubscriptionRoutes = require("./InternSubscription/internSubscription.routes")
 const aiCallRoutes = require("./AICall/aiCall.routes");
+const resumeValidationRoutes = require("./ResumeValidation/resumeValidation.routes");
     
 
 router.use("/interview", interviewRoutes)
 router.use("/ai-interview", aiInterviewRoutes)
 router.use("/intern-subscription", internSubscriptionRoutes)
+router.use("/resume", resumeValidationRoutes)
 router.use("/intern-registration", internRegistrationRoutes)
 router.use("/contact-us", contactUsRoutes)
 router.use("/blogs", blogsRoutes)
