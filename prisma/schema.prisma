@@ -957,6 +957,7 @@ model AICallQuestion {
   audioUrl  String?
   company   Company  @relation(fields: [companyId], references: [id])
   job       Job?     @relation(fields: [jobId], references: [id])
+  answers   AICallAnswer[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -978,12 +979,17 @@ model AICall {
   transcript            Json?
   callScore             Float?
   callSummary           String?
+  currentQuestionIndex  Int          @default(0)
+  interviewCompleted    Boolean      @default(false)
+  repeatCount           Int          @default(0)
+  conversationState     String       @default("INTRO")
 
   intern              Interns             @relation(fields: [internId], references: [id])
   company             Company             @relation(fields: [companyId], references: [id])
   job                 Job                 @relation(fields: [jobId], references: [id])
   candidateManagement CandidateManagement @relation(fields: [candidateManagementId], references: [id])
   attempts            AICallAttempt[]
+  answers             AICallAnswer[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1000,6 +1006,7 @@ model AICallAttempt {
   aiCallId      String
   attemptNumber Int
   callSid       String?
+  retellCallId  String?
   status        AICallAttemptStatus @default(IN_PROGRESS)
   duration      Int?
   scheduledAt   DateTime
@@ -1013,5 +1020,23 @@ model AICallAttempt {
   @@unique([aiCallId, attemptNumber])
   @@index([aiCallId])
   @@index([callSid])
+  @@index([retellCallId])
   @@map(name: "ai_call_attempts")
+}
+
+model AICallAnswer {
+  id         String   @id @default(uuid())
+  aiCallId   String
+  questionId String
+  answer     String
+  score      Float?
+  summary    String?
+  createdAt  DateTime @default(now())
+
+  aiCall   AICall         @relation(fields: [aiCallId], references: [id], onDelete: Cascade)
+  question AICallQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([aiCallId])
+  @@index([questionId])
+  @@map(name: "ai_call_answers")
 }

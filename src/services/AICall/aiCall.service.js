@@ -1,16 +1,7 @@
 require("dotenv").config();
-const twilio = require("twilio");
+const fetch = require("node-fetch");
 const prisma = require("../../config/database");
 // const { prepareCallAudio } = require("../../helpers/aiCallHelper"); // No longer needed — X AI Realtime handles audio dynamically
-
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN,
-);
-
-const BASE_URL =
-  process.env.BACKEND_PUBLIC_URL ||
-  "https://d047-2401-4900-1f3f-fb81-5598-93c-ca59-bcae.ngrok-free.app/api/v1";
 
 // Delay in ms for each retry after a failed attempt
 const RETRY_DELAYS = {
@@ -59,7 +50,7 @@ async function createAICallCampaign({
 }
 
 /**
- * Called by the retry cron job. Places a Twilio call for a pending AICall campaign.
+ * Called by the retry cron job. Places a Retell call for a pending AICall campaign.
  * Creates an AICallAttempt record for this attempt.
  */
 async function placeCallAttempt(aiCall) {
@@ -78,16 +69,6 @@ async function placeCallAttempt(aiCall) {
     });
     return;
   }
-
-  const company = await prisma.company.findUnique({
-    where: { id: aiCall.companyId },
-    select: { companyName: true },
-  });
-
-  const job = await prisma.job.findUnique({
-    where: { id: aiCall.jobId },
-    select: { jobTitle: true },
-  });
 
   // Fetch active questions (job-specific first, then company-level fallback)
   let questions = await prisma.aICallQuestion.findMany({
@@ -113,9 +94,6 @@ async function placeCallAttempt(aiCall) {
     return;
   }
 
-  // Pre-generate X AI TTS audio — no longer needed, X AI Realtime handles audio dynamically
-  // await prepareCallAudio(company.companyName, company?.aiCallIntro, questions);
-
   const newAttemptNumber = aiCall.attemptNumber + 1;
 
   // Mark campaign as CALLING and increment attempt counter
@@ -125,6 +103,10 @@ async function placeCallAttempt(aiCall) {
       status: "CALLING",
       attemptNumber: newAttemptNumber,
       nextCallAt: null,
+      currentQuestionIndex: 0,
+      interviewCompleted: false,
+      repeatCount: 0,
+      conversationState: "INTRO",
     },
   });
 
@@ -138,30 +120,69 @@ async function placeCallAttempt(aiCall) {
     },
   });
 
-  // Place the Twilio call
   const phone = intern.mobileNumber.startsWith("+")
     ? intern.mobileNumber
     : `+91${intern.mobileNumber}`;
 
-  const call = await twilioClient.calls.create({
-    to: phone,
-    from: process.env.TWILIO_PHONE_NUMBER,
-    url: `${BASE_URL}/ai-call/webhook/intro/${aiCall.id}/${attempt.id}`,
-    statusCallback: `${BASE_URL}/ai-call/webhook/complete/${aiCall.id}/${attempt.id}`,
-    statusCallbackMethod: "POST",
-    statusCallbackEvent: ["completed", "failed", "no-answer", "busy"],
-    timeout: 30,
-    machineDetection: "Enable",
-  });
+  const missingRetellEnv = [
+    "RETELL_API_KEY",
+    "RETELL_AGENT_ID",
+    "RETELL_FROM_NUMBER",
+  ].filter((key) => !process.env[key]);
 
-  // Save Twilio Call SID to the attempt
+  if (missingRetellEnv.length > 0) {
+    const reason = `Missing Retell env: ${missingRetellEnv.join(", ")}`;
+    console.error(`❌ ${reason}`);
+    await prisma.aICallAttempt.update({
+      where: { id: attempt.id },
+      data: { status: "FAILED", failReason: reason },
+    });
+    await scheduleNextAttempt(aiCall.id, newAttemptNumber);
+    return;
+  }
+
+  const retellResponse = await fetch(
+    "https://api.retellai.com/v2/create-phone-call",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RETELL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from_number: process.env.RETELL_FROM_NUMBER,
+        to_number: phone,
+        agent_id: process.env.RETELL_AGENT_ID,
+        metadata: { callId: aiCall.id, attemptId: attempt.id },
+      }),
+    },
+  );
+
+  if (!retellResponse.ok) {
+    const errBody = await retellResponse.text();
+    console.error(`❌ Retell API error: ${retellResponse.status} — ${errBody}`);
+    await prisma.aICallAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: "FAILED",
+        failReason: `Retell API error: ${retellResponse.status}`,
+      },
+    });
+    await scheduleNextAttempt(aiCall.id, newAttemptNumber);
+    return;
+  }
+
+  const retellData = await retellResponse.json();
+  const retellCallId = retellData.call_id;
+
   await prisma.aICallAttempt.update({
     where: { id: attempt.id },
-    data: { callSid: call.sid },
+    data: { retellCallId },
   });
 
+
   console.log(
-    `📞 AI Call attempt ${newAttemptNumber} placed: ${aiCall.id} → ${phone} (SID: ${call.sid})`,
+    `📞 AI Call attempt ${newAttemptNumber} placed via Retell: ${aiCall.id} → ${phone} (retellCallId: ${retellCallId})`,
   );
 }
 

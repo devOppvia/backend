@@ -1,215 +1,165 @@
-const twilio = require("twilio");
+const crypto = require("crypto");
 const prisma = require("../../config/database");
-const { scoreCallAnswers } = require("../../helpers/aiCallHelper");
-const {
-  getCallSession,
-  deleteCallSession,
-} = require("../../socket/openAirealtime");
 const { scheduleNextAttempt } = require("../../services/AICall/aiCall.service");
+const { scoringQueue } = require("../../jobs/scoringWorker");
 
-const VoiceResponse = twilio.twiml.VoiceResponse;
-const BASE_URL =
-  process.env.BACKEND_PUBLIC_URL ||
-  "https://d047-2401-4900-1f3f-fb81-5598-93c-ca59-bcae.ngrok-free.app/api/v1";
+function verifyRetellSignature(req) {
+  const signature = req.headers["x-retell-signature"];
+  if (!signature || !process.env.RETELL_API_KEY) return false;
 
-// ─── 1. INTRO — connects Twilio media stream to X AI Realtime ──────────────
-// NOTE: On Twilio trial accounts, a "Press any key to continue" message plays first.
-// We handle this by checking for Digits (keypress) — if present, proceed to stream.
-// If no Digits, we <Gather> the keypress first, then redirect back here.
-exports.webhookIntro = async (req, res) => {
-  const { callId, attemptId } = req.params;
+  const hmac = crypto.createHmac("sha256", process.env.RETELL_API_KEY);
+  hmac.update(JSON.stringify(req.body));
+  const expected = hmac.digest("hex");
 
-  // DEBUG: Log all request details
-  console.log(`📞 [Intro Webhook] callId=${callId}, attemptId=${attemptId}`);
-  console.log(
-    `📞 [Intro Webhook] Digits=${req.body.Digits}, CallStatus=${req.body.CallStatus}`,
+  if (signature.length !== expected.length) return false;
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature, "hex"),
+    Buffer.from(expected, "hex"),
   );
-  console.log(`📞 [Intro Webhook] AnsweredBy=${req.body.AnsweredBy}`);
+}
+
+function buildConversationText(transcript) {
+  if (typeof transcript === "string") return transcript;
+  if (!Array.isArray(transcript)) return "";
+
+  return transcript
+    .map((turn) => {
+      const role = turn.role === "agent" ? "Interviewer" : "Candidate";
+      const content = turn.content || turn.words || "";
+      return `${role}: ${content}`;
+    })
+    .join("\n");
+}
+
+async function retryCall(callId, status, duration, failReason) {
+  const aiCall = await prisma.aICall.findUnique({ where: { id: callId } });
+  if (!aiCall) return;
+
+  await prisma.aICall.update({
+    where: { id: callId },
+    data: {
+      conversationState: "INTRO",
+      interviewCompleted: false,
+      currentQuestionIndex: 0,
+      repeatCount: 0,
+    },
+  });
+
+  await scheduleNextAttempt(callId, aiCall.attemptNumber);
+}
+
+exports.webhookRetell = async (req, res) => {
+  res.sendStatus(200);
+
+  if (process.env.NODE_ENV === "production" && !verifyRetellSignature(req)) {
+    console.warn("⚠️ [Retell Webhook] Invalid signature — ignoring");
+    return;
+  }
+
+  const { event, call } = req.body || {};
+  const retellCallId = call?.call_id;
+  const metadata = call?.metadata || {};
+  const callId = metadata.callId;
+  const attemptId = metadata.attemptId;
+
+  console.log(
+    `📞 [Retell Webhook] event=${event}, retellCallId=${retellCallId}, callId=${callId}`,
+  );
+
+  if (!callId || !attemptId) {
+    console.warn("⚠️ [Retell Webhook] Missing call metadata — cannot process");
+    return;
+  }
 
   try {
-    const aiCall = await prisma.aICall.findUnique({
-      where: { id: callId },
-    });
-
-    if (!aiCall) {
-      console.error(`❌ AICall ${callId} not found`);
-      return res.status(404).send("<Response><Hangup/></Response>");
-    }
-
-    // Answering machine detected → mark attempt, schedule retry
-    if (req.body.AnsweredBy === "machine_start") {
+    if (event === "call_started") {
       await prisma.aICallAttempt.update({
         where: { id: attemptId },
         data: {
-          status: "MACHINE_DETECTED",
-          failReason: "Answering machine detected",
+          answeredAt: new Date(),
+          status: "IN_PROGRESS",
+          retellCallId,
         },
       });
-      await scheduleNextAttempt(callId, aiCall.attemptNumber);
-
-      const twiml = new VoiceResponse();
-      twiml.hangup();
-      return res.type("text/xml").send(twiml.toString());
+      return;
     }
 
-    // Intern picked up — record answeredAt
-    await prisma.aICallAttempt.update({
-      where: { id: attemptId },
-      data: { answeredAt: new Date() },
-    });
+    if (event !== "call_ended") return;
 
-    // ─── Connect directly to X AI Realtime stream ─────────────────────────
-    // Build WebSocket URL: remove /api/v1 from BASE_URL, put callId/attemptId in PATH
-    // NOTE: Twilio strips query strings from WebSocket connections, so we use path params
-    const baseHost = BASE_URL.replace(/^https?:\/\//, "").replace(
-      /\/api\/v1\/?$/,
-      "",
-    );
-    const wsUrl = `wss://${baseHost}/media-stream/${callId}/${attemptId}`;
+    const endReason = call.disconnection_reason || call.end_reason || "";
+    const durationMs = call.duration_ms || 0;
+    const durationSec = Math.round(durationMs / 1000);
+    const conversationText = buildConversationText(call.transcript);
 
-    console.log(`📞 [Stream mode] BASE_URL=${BASE_URL}, baseHost=${baseHost}`);
-    console.log(`📞 [Stream mode] WebSocket URL: ${wsUrl}`);
+    const noAnswerReasons = ["user_not_picked_up", "no_answer", "busy"];
+    const machineReasons = ["voicemail_reached", "machine_detected"];
+    const failReasons = ["call_failed", "error"];
 
-    const twiml = new VoiceResponse();
-    const connect = twiml.connect();
-    connect.stream({
-      url: wsUrl,
-    });
-
-    const twimlString = twiml.toString();
-    console.log(`📞 [Stream mode] Stream TwiML: ${twimlString}`);
-    console.log(`📞 [Stream mode] Sending TwiML for call ${callId}`);
-    res.type("text/xml").send(twimlString);
-
-    // ─── Old flow (commented out — pre-recorded audio + question/answer webhooks) ──
-    // const introAudioUrl = `${UPLOAD_BASE_URL}/uploads/ai_call_audio/intro_${Buffer.from(companyName).toString("hex").slice(0, 12)}.mp3`;
-    // const twiml = new VoiceResponse();
-    // twiml.play(introAudioUrl);
-    // twiml.redirect({ method: "POST" }, `${BASE_URL}/ai-call/webhook/question/${callId}/${attemptId}/0`);
-    // res.type("text/xml").send(twiml.toString());
-  } catch (err) {
-    console.error("❌ Intro webhook error:", err);
-    const twiml = new VoiceResponse();
-    twiml.say("Sorry, there was an error. Goodbye.");
-    twiml.hangup();
-    res.type("text/xml").send(twiml.toString());
-  }
-};
-
-// ─── 2. STATUS CALLBACK — call ended, score & store ────────────────────────
-exports.webhookComplete = async (req, res) => {
-  const { callId, attemptId } = req.params;
-  const callStatus = req.body.CallStatus;
-  const duration = parseInt(req.body.CallDuration || "0", 10);
-
-  try {
-    const aiCall = await prisma.aICall.findUnique({
-      where: { id: callId },
-      include: {
-        company: { select: { companyName: true } },
-        job: { select: { jobTitle: true } },
-      },
-    });
-
-    if (!aiCall) return res.sendStatus(200);
-
-    // ── Call was not answered ──────────────────────────────────────────────
-    if (callStatus === "no-answer" || callStatus === "busy") {
+    if (noAnswerReasons.includes(endReason)) {
       await prisma.aICallAttempt.update({
         where: { id: attemptId },
         data: {
           status: "NOT_ANSWERED",
-          duration,
-          failReason: `Twilio status: ${callStatus}`,
+          duration: durationSec,
+          failReason: endReason,
+          retellCallId,
         },
       });
-      await scheduleNextAttempt(callId, aiCall.attemptNumber);
-      deleteCallSession(callId);
-      return res.sendStatus(200);
+      await retryCall(callId);
+      return;
     }
 
-    // ── Technical failure ──────────────────────────────────────────────────
-    if (callStatus === "failed") {
+    if (machineReasons.includes(endReason)) {
       await prisma.aICallAttempt.update({
         where: { id: attemptId },
-        data: { status: "FAILED", duration, failReason: "Twilio call failed" },
-      });
-      await scheduleNextAttempt(callId, aiCall.attemptNumber);
-      deleteCallSession(callId);
-      return res.sendStatus(200);
-    }
-
-    // ── Call completed — retrieve conversation from session, score it ─────
-    if (callStatus === "completed") {
-      const session = getCallSession(callId);
-      const conversationText = session?.conversationText || "";
-
-      // If duration is very short or no conversation → intern dropped early
-      const didAttend = conversationText.length > 20 && duration > 15;
-
-      if (!didAttend) {
-        await prisma.aICallAttempt.update({
-          where: { id: attemptId },
-          data: { status: "ANSWERED_DROPPED", duration },
-        });
-        await scheduleNextAttempt(callId, aiCall.attemptNumber);
-        deleteCallSession(callId);
-        return res.sendStatus(200);
-      }
-
-      // Score the conversation using X AI chat completions
-      let callScore = null;
-      let callSummary = null;
-
-      console.log(
-        `📞 [Call ${callId}] Conversation text:\n${conversationText}`,
-      );
-
-      try {
-        const result = await scoreCallAnswers(
-          aiCall.company.companyName,
-          aiCall.job.jobTitle,
-          conversationText,
-        );
-        console.log("result ======> ", result);
-
-        callScore = result.callScore;
-        callSummary = result.callSummary;
-      } catch (scoreErr) {
-        console.error("❌ Scoring failed:", scoreErr);
-      }
-
-      await prisma.aICallAttempt.update({
-        where: { id: attemptId },
-        data: { status: "ANSWERED_COMPLETED", duration },
-      });
-
-      await prisma.aICall.update({
-        where: { id: callId },
         data: {
-          status: "COMPLETED",
-          callScore,
-          callSummary,
-          transcript: conversationText,
+          status: "MACHINE_DETECTED",
+          duration: durationSec,
+          failReason: "Answering machine detected",
+          retellCallId,
         },
       });
-
-      if (callScore !== null) {
-        await prisma.candidateManagement.update({
-          where: { id: aiCall.candidateManagementId },
-          data: { score: Math.round(callScore), scoredReason: callSummary },
-        });
-      }
-
-      console.log(`✅ AI Call ${callId} completed — score: ${callScore}`);
-      console.log("callSummary", callSummary);
-
-      deleteCallSession(callId);
+      await retryCall(callId);
+      return;
     }
 
-    res.sendStatus(200);
+    if (failReasons.includes(endReason)) {
+      await prisma.aICallAttempt.update({
+        where: { id: attemptId },
+        data: {
+          status: "FAILED",
+          duration: durationSec,
+          failReason: endReason,
+          retellCallId,
+        },
+      });
+      await retryCall(callId);
+      return;
+    }
+
+    const didAttend = conversationText.length > 20 && durationSec > 15;
+    if (!didAttend) {
+      await prisma.aICallAttempt.update({
+        where: { id: attemptId },
+        data: {
+          status: "ANSWERED_DROPPED",
+          duration: durationSec,
+          retellCallId,
+        },
+      });
+      await retryCall(callId);
+      return;
+    }
+
+    await scoringQueue.add(
+      "score-call",
+      { callId, attemptId, durationSec, conversationText },
+      { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
+    );
+
+    console.log(`📬 [Retell Webhook] Scoring job enqueued for callId=${callId}`);
   } catch (err) {
-    console.error("❌ Complete webhook error:", err);
-    res.sendStatus(200); // always 200 to Twilio or it will retry
+    console.error("❌ [Retell Webhook] Unhandled error:", err);
   }
 };
