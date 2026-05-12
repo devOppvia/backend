@@ -8,7 +8,7 @@ const connection = new IORedis(
   { maxRetriesPerRequest: null },
 );
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 
 const scoringQueue = new Queue("ai-call-scoring", { connection });
 
