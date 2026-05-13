@@ -239,7 +239,7 @@ return allQuestionUi;
       }
 
       body {
-        font-family: "DM Sans", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         background: var(--off-white);
         color: var(--dark);
         min-height: 100vh;
@@ -284,7 +284,7 @@ return allQuestionUi;
       }
 
       .logo-name {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-weight: 800;
         font-size: 22px;
         color: var(--white);
@@ -292,7 +292,7 @@ return allQuestionUi;
       }
 
       .header-badge {
-        font-family: "DM Sans", sans-serif;
+        font-family:'Inter', system-ui, -apple-system, sans-serif;
         font-size: 12px;
         font-weight: 500;
         color: var(--muted);
@@ -357,7 +357,7 @@ return allQuestionUi;
       }
 
       .hero-candidate {
-        font-family: "Syne", sans-serif;
+        font-family:'Inter', system-ui, -apple-system, sans-serif;
         font-size: 38px;
         font-weight: 800;
         color: var(--white);
@@ -419,7 +419,7 @@ return allQuestionUi;
       }
 
       .score-value {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 30px;
         font-weight: 800;
         color: var(--white);
@@ -442,7 +442,7 @@ return allQuestionUi;
 
       /* Section headers */
       .section-title {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.14em;
@@ -508,7 +508,7 @@ return allQuestionUi;
       }
 
       .perf-tile-value {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 22px;
         font-weight: 700;
         color: var(--dark);
@@ -531,7 +531,7 @@ return allQuestionUi;
         border: 1px solid rgba(10, 48, 49, 0.12);
         border-radius: 8px;
         padding: 8px 14px;
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 14px;
         font-weight: 700;
         color: var(--dark);
@@ -612,7 +612,7 @@ return allQuestionUi;
         background: var(--dark);
         color: var(--white);
         border-radius: 8px;
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 13px;
         font-weight: 700;
         display: flex;
@@ -647,7 +647,7 @@ return allQuestionUi;
       .qa-num {
         background: rgba(255, 255, 255, 0.12);
         color: var(--white);
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 12px;
         font-weight: 700;
         padding: 4px 10px;
@@ -820,7 +820,7 @@ return allQuestionUi;
     <div class="hero">
       <div class="hero-inner">
         <div class="report-label"><span></span>AI-Powered Assessment</div>
-        <div class="hero-candidate">Sarah Johnson</div>
+        <div class="hero-candidate">${intern?.fullName}</div>
         <div class="hero-meta">
           <div class="hero-meta-item">
             <svg
@@ -929,9 +929,9 @@ return allQuestionUi;
           </div>
           <div class="perf-tile-label">STAR Used</div>
           <div class="perf-tile-value">
-            ${interview.starUsed ?? 0} / 
+            ${interview.starUsed ?? 0} /
             <span style="font-size: 14px; color: #7a9a9b; font-weight: 400"
-              >/ ${interview.totalQuestions ?? 0}</span
+              >${interview.totalQuestions ?? 0}</span
             >
           </div>
         </div>
@@ -981,7 +981,7 @@ return allQuestionUi;
           </div>
           <div
             style="
-              font-family: &quot;Syne&quot;, sans-serif;
+              font-family:'Inter', system-ui, -apple-system, sans-serif;
               font-size: 28px;
               font-weight: 800;
               color: var(--dark);
@@ -1008,35 +1008,35 @@ return allQuestionUi;
             <div class="bar-item">
               <span class="bar-item-label">Confident</span>
               <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
+                <div class="bar-fill" style="width: ${beh.confident}%"></div>
               </div>
               <span class="bar-pct">${beh.confident ?? 0}%</span>
             </div>
             <div class="bar-item">
               <span class="bar-item-label">Nervous</span>
               <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
+                <div class="bar-fill" style="width: ${beh.nervous}%"></div>
               </div>
               <span class="bar-pct">${beh.nervous ?? 0}%</span>
             </div>
             <div class="bar-item">
               <span class="bar-item-label">Neutral</span>
               <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
+                <div class="bar-fill" style="width: ${beh.neutral}%"></div>
               </div>
               <span class="bar-pct">${beh.neutral ?? 0}%</span>
             </div>
             <div class="bar-item">
               <span class="bar-item-label">Happy</span>
               <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
+                <div class="bar-fill" style="width: ${beh.happy}%"></div>
               </div>
               <span class="bar-pct">${beh.happy ?? 0}%</span>
             </div>
             <div class="bar-item">
               <span class="bar-item-label">Confused</span>
               <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
+                <div class="bar-fill" style="width: ${beh.confused}%"></div>
               </div>
               <span class="bar-pct">${beh.confused ?? 0}%</span>
             </div>
@@ -1152,7 +1152,7 @@ return allQuestionUi;
       path: filePath,
       format: "A4",
       printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+      // margin: { top: "10mm", bottom: "10mm", left: "15mm", right: "15mm" },
     });
   } finally {
     await browser.close();
