@@ -423,9 +423,26 @@ exports.completeInterview = async (req, res) => {
   try {
     const internId = req.user.id;
     const { id } = req.params;
+    const {status } = req.body
+
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+
+
+
+    if (status && status == "ABANDONED") {
+
+      await prisma.aIInterview.update({
+        where: { id },
+        data: {
+          status: status,
+          completedAt : new Date(),
+        },
+      });
+
+      return
+    }
 
     const [questions, expressions] = await Promise.all([
       prisma.aIInterviewQuestion.findMany({
