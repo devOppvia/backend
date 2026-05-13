@@ -84,6 +84,59 @@ async function validateResumeText(resumeText) {
   return normalizeResult(extractJson(content));
 }
 
+async function extractCandidateNameFromResume(resumeText) {
+  const cleanedText = String(resumeText || "").trim();
+
+  if (cleanedText.length < 20) {
+    return { candidateName: null };
+  }
+
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key is not configured");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      temperature: 0,
+      max_tokens: 60,
+      messages: [
+        {
+          role: "system",
+          content:
+            'You extract the candidate\'s full name from resume text. Return only JSON with key "candidateName" (string or null). Return null if no name is found.',
+        },
+        {
+          role: "user",
+          content: `Extract the candidate name from this resume:\n\n${cleanedText.slice(0, 3000)}`,
+        },
+      ],
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.error?.message || "OpenAI API error");
+  }
+
+  const content = data?.choices?.[0]?.message?.content;
+  const parsed = extractJson(content);
+  return {
+    candidateName:
+      typeof parsed.candidateName === "string" && parsed.candidateName.trim()
+        ? parsed.candidateName.trim()
+        : null,
+  };
+}
+
 module.exports = {
   validateResumeText,
+  extractCandidateNameFromResume,
 };
