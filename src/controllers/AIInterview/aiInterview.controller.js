@@ -423,7 +423,7 @@ exports.completeInterview = async (req, res) => {
   try {
     const internId = req.user.id;
     const { id } = req.params;
-    const {status } = req.body
+    const { status } = req.body
 
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
@@ -441,7 +441,14 @@ exports.completeInterview = async (req, res) => {
         },
       });
 
-      return
+        return successResponse(
+          res,
+          {
+            
+          },
+          "Interview completed",
+          200,
+        );
     }
 
     const [questions, expressions] = await Promise.all([
