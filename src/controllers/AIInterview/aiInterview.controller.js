@@ -14,7 +14,7 @@ const QUESTION_ROTATION = [
 ];
 
 const getQuestionCount = (durationMins) => {
-  if (durationMins == 15) return 10;
+  if (durationMins == 15) return 4;
   if (durationMins == 30) return 18;
   if (durationMins == 45) return 26;
   if (durationMins == 60) return 42;
