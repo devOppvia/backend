@@ -70,6 +70,7 @@ exports.getResult = async (req, res) => {
       aiInsights: interview.aiInsights,
       reportPdfPath: interview.reportPdfPath,
       completedAt: interview.completedAt,
+      status: interview.status,
     };
 
     return successResponse(res, result, "Result fetched", 200);
