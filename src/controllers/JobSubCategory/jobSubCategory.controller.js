@@ -111,28 +111,31 @@ exports.getSubCategoriesBasedOnCategory = async (req, res) => {
         return errorResponse(res, "Invalid category format", 400);
       }
     }
-    console.log("condition : " +{
-      where : {
-        jobCategoryId : {
-          in : categoryIds
-        },
-        isDelete : false,
-        skills : {
-          some : {
-            isDelete : false
-          }
-        }
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        id: true,
-        subCategoryName: true,
-        createdAt: true,
-        jobCategoryId: true,
-      },
-    })
+    console.log(
+      "condition : " +
+        JSON.stringify({
+          where: {
+            jobCategoryId: {
+              in: categoryIds,
+            },
+            isDelete: false,
+            skills: {
+              some: {
+                isDelete: false,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            id: true,
+            subCategoryName: true,
+            createdAt: true,
+            jobCategoryId: true,
+          },
+        }),
+    );
     let existingSubcategories = await prisma.jobSubCategory.findMany({
       where : {
         jobCategoryId : {
