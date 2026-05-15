@@ -418,193 +418,785 @@ async function seed() {
   //   },
   // ];
 
- const jobData = [
-   {
-     categoryName: "Information Technology (IT) & Software Development",
-     subCategories: [
-       {
-         subCategoryName: "Software Development",
-         skills: [
-           "JavaScript",
-           "TypeScript",
-           "Node.js",
-           "React.js",
-           "Next.js",
-           "Express.js",
-           "Java",
-           "Python",
-           "C++",
-           "REST API",
-         ],
-       },
-       {
-         subCategoryName: "AI & Machine Learning",
-         skills: [
-           "Python",
-           "Machine Learning",
-           "Deep Learning",
-           "TensorFlow",
-           "PyTorch",
-           "NLP",
-           "Computer Vision",
-           "LLMs",
-           "OpenAI API",
-           "Scikit-learn",
-         ],
-       },
-       {
-         subCategoryName: "Data Science & Analytics",
-         skills: [
-           "Python",
-           "SQL",
-           "Power BI",
-           "Tableau",
-           "Pandas",
-           "NumPy",
-           "Data Visualization",
-           "Statistics",
-           "Excel",
-           "Machine Learning",
-         ],
-       },
-       {
-         subCategoryName: "Cybersecurity",
-         skills: [
-           "Ethical Hacking",
-           "Penetration Testing",
-           "Network Security",
-           "Kali Linux",
-           "Wireshark",
-           "SIEM",
-           "Firewall Management",
-           "Vulnerability Assessment",
-           "OWASP",
-           "SOC Operations",
-         ],
-       },
-       {
-         subCategoryName: "Cloud & DevOps",
-         skills: [
-           "AWS",
-           "Azure",
-           "Google Cloud",
-           "Docker",
-           "Kubernetes",
-           "Terraform",
-           "CI/CD",
-           "Jenkins",
-           "GitHub Actions",
-           "Linux",
-         ],
-       },
-       {
-         subCategoryName: "UI/UX & Design",
-         skills: [
-           "Figma",
-           "Adobe XD",
-           "Wireframing",
-           "Prototyping",
-           "User Research",
-           "UI Design",
-           "UX Design",
-           "Canva",
-           "Photoshop",
-           "Design Systems",
-         ],
-       },
-       {
-         subCategoryName: "Digital Marketing",
-         skills: [
-           "SEO",
-           "Google Ads",
-           "Facebook Ads",
-           "Content Marketing",
-           "Email Marketing",
-           "Social Media Marketing",
-           "Google Analytics",
-           "Copywriting",
-           "Brand Marketing",
-           "Marketing Automation",
-         ],
-       },
-       {
-         subCategoryName: "QA & Testing",
-         skills: [
-           "Manual Testing",
-           "Automation Testing",
-           "Selenium",
-           "Cypress",
-           "Playwright",
-           "Jest",
-           "Postman",
-           "API Testing",
-           "Regression Testing",
-           "Performance Testing",
-         ],
-       },
-       {
-         subCategoryName: "Database & Backend",
-         skills: [
-           "MySQL",
-           "PostgreSQL",
-           "MongoDB",
-           "Redis",
-           "Node.js",
-           "Express.js",
-           "GraphQL",
-           "REST API",
-           "Firebase",
-           "Database Design",
-         ],
-       },
-       {
-         subCategoryName: "Networking & Infrastructure",
-         skills: [
-           "TCP/IP",
-           "Routing & Switching",
-           "CCNA",
-           "VPN",
-           "Firewall Configuration",
-           "Linux Server",
-           "Windows Server",
-           "DNS",
-           "System Administration",
-           "Network Monitoring",
-         ],
-       },
-       {
-         subCategoryName: "Product & Project Management",
-         skills: [
-           "Agile",
-           "Scrum",
-           "JIRA",
-           "Product Management",
-           "Project Planning",
-           "Roadmapping",
-           "Stakeholder Management",
-           "Business Analysis",
-           "Kanban",
-           "Team Leadership",
-         ],
-       },
-       {
-         subCategoryName: "Blockchain & Web3",
-         skills: [
-           "Solidity",
-           "Ethereum",
-           "Smart Contracts",
-           "Web3.js",
-           "Hardhat",
-           "NFT Development",
-           "DeFi",
-           "Cryptography",
-           "Blockchain Security",
-           "Ethers.js",
-         ],
-       },
-     ],
-   },
- ];
+const jobData = [
+  {
+    categoryName: "Software Development",
+    subCategories: [
+      {
+        subCategoryName: "Frontend Dev",
+        skills: ["React", "Next.js", "Vue.js", "Angular", "TypeScript"],
+      },
+      {
+        subCategoryName: "Backend Dev",
+        skills: ["Node.js", "Python", "Java", "Go", "REST API"],
+      },
+      {
+        subCategoryName: "Full Stack Dev",
+        skills: ["React", "Node.js", "MongoDB", "PostgreSQL", "GraphQL"],
+      },
+      {
+        subCategoryName: "Mobile (iOS)",
+        skills: ["Swift", "iOS SDK", "Xcode", "UIKit", "Firebase"],
+      },
+      {
+        subCategoryName: "Mobile (Android)",
+        skills: [
+          "Kotlin",
+          "Java",
+          "Android SDK",
+          "Jetpack Compose",
+          "Firebase",
+        ],
+      },
+      {
+        subCategoryName: "React Native / Flutter",
+        skills: ["React Native", "Flutter", "Dart", "Expo", "Firebase"],
+      },
+      {
+        subCategoryName: "WordPress / CMS",
+        skills: ["WordPress", "PHP", "Elementor", "WooCommerce", "MySQL"],
+      },
+      {
+        subCategoryName: "Shopify Dev",
+        skills: ["Shopify", "Liquid", "JavaScript", "HTML", "CSS"],
+      },
+      {
+        subCategoryName: "Game Dev",
+        skills: ["Unity", "C#", "Unreal Engine", "Game Physics", "Blender"],
+      },
+      {
+        subCategoryName: "Embedded / IoT",
+        skills: ["C", "C++", "Arduino", "Raspberry Pi", "IoT"],
+      },
+      {
+        subCategoryName: "Desktop App Dev",
+        skills: ["Electron", "C#", ".NET", "JavaFX", "Qt"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "AI & ML",
+    subCategories: [
+      {
+        subCategoryName: "ML Engineer",
+        skills: ["Python", "Scikit-learn", "TensorFlow", "PyTorch", "Pandas"],
+      },
+      {
+        subCategoryName: "Deep Learning Eng.",
+        skills: ["PyTorch", "TensorFlow", "Keras", "CUDA", "CNN"],
+      },
+      {
+        subCategoryName: "NLP Engineer",
+        skills: ["SpaCy", "NLTK", "Transformers", "Hugging Face", "Python"],
+      },
+      {
+        subCategoryName: "Computer Vision Eng.",
+        skills: ["OpenCV", "YOLO", "PyTorch", "TensorFlow", "Image Processing"],
+      },
+      {
+        subCategoryName: "AI Prompt Engineer",
+        skills: [
+          "OpenAI API",
+          "Prompt Engineering",
+          "LangChain",
+          "LLMs",
+          "RAG",
+        ],
+      },
+      {
+        subCategoryName: "LLM Fine-tuning",
+        skills: ["LoRA", "Transformers", "Hugging Face", "PyTorch", "PEFT"],
+      },
+      {
+        subCategoryName: "Generative AI Dev",
+        skills: ["LangChain", "OpenAI API", "Vector DB", "LLMs", "RAG"],
+      },
+      {
+        subCategoryName: "AI Research Scientist",
+        skills: ["Python", "Research", "Deep Learning", "Math", "PyTorch"],
+      },
+      {
+        subCategoryName: "Chatbot / Conv. AI",
+        skills: ["Dialogflow", "Rasa", "OpenAI API", "LangChain", "NLP"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Data Science",
+    subCategories: [
+      {
+        subCategoryName: "Data Scientist",
+        skills: ["Python", "Pandas", "NumPy", "Machine Learning", "SQL"],
+      },
+      {
+        subCategoryName: "Data Analyst",
+        skills: ["Excel", "SQL", "Power BI", "Tableau", "Data Visualization"],
+      },
+      {
+        subCategoryName: "BI Analyst",
+        skills: ["Power BI", "Tableau", "Looker", "SQL", "Excel"],
+      },
+      {
+        subCategoryName: "Data Engineer",
+        skills: ["Spark", "Airflow", "Kafka", "dbt", "Python"],
+      },
+      {
+        subCategoryName: "Big Data Engineer",
+        skills: ["Hadoop", "Spark", "Hive", "Kafka", "Scala"],
+      },
+      {
+        subCategoryName: "DBA",
+        skills: [
+          "PostgreSQL",
+          "MySQL",
+          "Backup",
+          "Performance Tuning",
+          "Replication",
+        ],
+      },
+      {
+        subCategoryName: "ETL Developer",
+        skills: ["ETL", "SSIS", "Talend", "dbt", "SQL"],
+      },
+      {
+        subCategoryName: "Power BI / Tableau",
+        skills: ["Power BI", "Tableau", "DAX", "Data Modeling", "SQL"],
+      },
+      {
+        subCategoryName: "Quantitative Analyst",
+        skills: ["Python", "R", "Statistics", "Excel", "Machine Learning"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Cybersecurity",
+    subCategories: [
+      {
+        subCategoryName: "Penetration Tester",
+        skills: ["Kali Linux", "Metasploit", "Burp Suite", "Nmap", "OWASP"],
+      },
+      {
+        subCategoryName: "SOC Analyst",
+        skills: ["SIEM", "Splunk", "Incident Response", "Log Analysis", "SOC"],
+      },
+      {
+        subCategoryName: "Security Engineer",
+        skills: [
+          "Firewall",
+          "IDS/IPS",
+          "Network Security",
+          "IAM",
+          "Encryption",
+        ],
+      },
+      {
+        subCategoryName: "Cloud Security Arch.",
+        skills: [
+          "AWS Security",
+          "Azure Security",
+          "IAM",
+          "Cloud Security",
+          "DevSecOps",
+        ],
+      },
+      {
+        subCategoryName: "Network Security Eng.",
+        skills: ["VPN", "Firewalls", "Cisco", "Wireshark", "TCP/IP"],
+      },
+      {
+        subCategoryName: "AppSec Engineer",
+        skills: ["OWASP", "SAST", "DAST", "Secure Coding", "Burp Suite"],
+      },
+      {
+        subCategoryName: "Incident Response",
+        skills: [
+          "Forensics",
+          "Threat Hunting",
+          "SIEM",
+          "Malware Analysis",
+          "Splunk",
+        ],
+      },
+      {
+        subCategoryName: "Digital Forensics",
+        skills: ["Autopsy", "FTK", "Wireshark", "Memory Analysis", "Forensics"],
+      },
+      {
+        subCategoryName: "GRC Analyst",
+        skills: ["ISO 27001", "Risk Assessment", "Compliance", "Audit", "NIST"],
+      },
+      {
+        subCategoryName: "IAM Specialist",
+        skills: ["Okta", "Azure AD", "SSO", "RBAC", "Identity Management"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Cloud & DevOps",
+    subCategories: [
+      {
+        subCategoryName: "DevOps Engineer",
+        skills: ["Docker", "Kubernetes", "Jenkins", "CI/CD", "Linux"],
+      },
+      {
+        subCategoryName: "Cloud Architect",
+        skills: ["AWS", "Azure", "GCP", "Terraform", "Networking"],
+      },
+      {
+        subCategoryName: "SRE",
+        skills: ["Monitoring", "Grafana", "Prometheus", "Linux", "Kubernetes"],
+      },
+      {
+        subCategoryName: "Platform Engineer",
+        skills: ["Terraform", "Kubernetes", "AWS", "CI/CD", "Docker"],
+      },
+      {
+        subCategoryName: "Kubernetes / Docker",
+        skills: ["Docker", "Kubernetes", "Helm", "Containerization", "Linux"],
+      },
+      {
+        subCategoryName: "CI/CD Engineer",
+        skills: [
+          "GitHub Actions",
+          "Jenkins",
+          "GitLab CI",
+          "Docker",
+          "Automation",
+        ],
+      },
+      {
+        subCategoryName: "Linux Sysadmin",
+        skills: ["Linux", "Shell Scripting", "Nginx", "Apache", "System Admin"],
+      },
+      {
+        subCategoryName: "Cloud Migration",
+        skills: ["AWS", "Azure", "Migration", "Terraform", "Cloud Strategy"],
+      },
+      {
+        subCategoryName: "IaC (Terraform)",
+        skills: ["Terraform", "Ansible", "AWS", "IaC", "Automation"],
+      },
+      {
+        subCategoryName: "Monitoring Eng.",
+        skills: [
+          "Grafana",
+          "Prometheus",
+          "ELK Stack",
+          "Monitoring",
+          "Alerting",
+        ],
+      },
+    ],
+  },
+
+  {
+    categoryName: "UI/UX & Design",
+    subCategories: [
+      {
+        subCategoryName: "UI Designer",
+        skills: [
+          "Figma",
+          "Adobe XD",
+          "Design Systems",
+          "Wireframing",
+          "UI Design",
+        ],
+      },
+      {
+        subCategoryName: "UX Designer",
+        skills: [
+          "User Research",
+          "Prototyping",
+          "Figma",
+          "UX Design",
+          "Usability Testing",
+        ],
+      },
+      {
+        subCategoryName: "Product Designer",
+        skills: [
+          "Figma",
+          "Product Thinking",
+          "Design Systems",
+          "UX",
+          "Prototyping",
+        ],
+      },
+      {
+        subCategoryName: "Motion Designer",
+        skills: [
+          "After Effects",
+          "Animation",
+          "Premiere Pro",
+          "Motion Graphics",
+          "Video Editing",
+        ],
+      },
+      {
+        subCategoryName: "Graphic Designer",
+        skills: ["Photoshop", "Illustrator", "Canva", "Branding", "Typography"],
+      },
+      {
+        subCategoryName: "Design System",
+        skills: [
+          "Figma",
+          "Tokens",
+          "Components",
+          "Design Systems",
+          "Accessibility",
+        ],
+      },
+      {
+        subCategoryName: "Figma Expert",
+        skills: [
+          "Figma",
+          "Auto Layout",
+          "Components",
+          "Prototyping",
+          "Design Systems",
+        ],
+      },
+      {
+        subCategoryName: "User Researcher",
+        skills: ["User Interviews", "Research", "Analytics", "Personas", "UX"],
+      },
+      {
+        subCategoryName: "Accessibility Designer",
+        skills: [
+          "WCAG",
+          "Accessibility",
+          "Color Contrast",
+          "Screen Readers",
+          "Inclusive Design",
+        ],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Digital Marketing",
+    subCategories: [
+      {
+        subCategoryName: "SEO Specialist",
+        skills: [
+          "SEO",
+          "Ahrefs",
+          "SEMrush",
+          "Keyword Research",
+          "Google Search Console",
+        ],
+      },
+      {
+        subCategoryName: "Google Ads / SEM",
+        skills: [
+          "Google Ads",
+          "PPC",
+          "Keyword Planner",
+          "GA4",
+          "Conversion Tracking",
+        ],
+      },
+      {
+        subCategoryName: "Social Media Mgr",
+        skills: [
+          "Instagram",
+          "Facebook",
+          "LinkedIn",
+          "Canva",
+          "Content Strategy",
+        ],
+      },
+      {
+        subCategoryName: "Content Marketer",
+        skills: ["Content Writing", "SEO", "Blogging", "Copywriting", "CMS"],
+      },
+      {
+        subCategoryName: "Email Marketing",
+        skills: [
+          "Mailchimp",
+          "Klaviyo",
+          "Campaigns",
+          "Automation",
+          "Segmentation",
+        ],
+      },
+      {
+        subCategoryName: "Performance Mktg",
+        skills: ["Meta Ads", "Google Ads", "Analytics", "Funnels", "CRO"],
+      },
+      {
+        subCategoryName: "Affiliate Marketing",
+        skills: [
+          "Affiliate Networks",
+          "Tracking",
+          "SEO",
+          "Content Marketing",
+          "Analytics",
+        ],
+      },
+      {
+        subCategoryName: "CRO Specialist",
+        skills: [
+          "A/B Testing",
+          "Heatmaps",
+          "Analytics",
+          "Funnels",
+          "Optimization",
+        ],
+      },
+      {
+        subCategoryName: "Marketing Analytics",
+        skills: ["GA4", "Looker Studio", "Power BI", "Data Analytics", "Excel"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "QA & Testing",
+    subCategories: [
+      {
+        subCategoryName: "Manual QA",
+        skills: [
+          "Manual Testing",
+          "Bug Tracking",
+          "Test Cases",
+          "Jira",
+          "Regression Testing",
+        ],
+      },
+      {
+        subCategoryName: "Automation QA",
+        skills: [
+          "Selenium",
+          "Cypress",
+          "Playwright",
+          "Automation",
+          "JavaScript",
+        ],
+      },
+      {
+        subCategoryName: "Performance Testing",
+        skills: [
+          "JMeter",
+          "K6",
+          "Load Testing",
+          "Performance",
+          "Stress Testing",
+        ],
+      },
+      {
+        subCategoryName: "Mobile Testing",
+        skills: [
+          "Appium",
+          "Android Testing",
+          "iOS Testing",
+          "Automation",
+          "QA",
+        ],
+      },
+      {
+        subCategoryName: "API Testing",
+        skills: ["Postman", "REST API", "GraphQL", "Automation", "Swagger"],
+      },
+      {
+        subCategoryName: "QA Lead",
+        skills: [
+          "Leadership",
+          "QA Strategy",
+          "Automation",
+          "Test Planning",
+          "Agile",
+        ],
+      },
+      {
+        subCategoryName: "Test Analyst",
+        skills: [
+          "Test Cases",
+          "Manual Testing",
+          "Analysis",
+          "Regression",
+          "Documentation",
+        ],
+      },
+      {
+        subCategoryName: "Selenium / Cypress",
+        skills: ["Selenium", "Cypress", "JavaScript", "Automation", "Testing"],
+      },
+      {
+        subCategoryName: "UAT Coordinator",
+        skills: [
+          "UAT",
+          "Stakeholder Management",
+          "Testing",
+          "Documentation",
+          "Communication",
+        ],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Database & Backend",
+    subCategories: [
+      {
+        subCategoryName: "PostgreSQL Dev",
+        skills: [
+          "PostgreSQL",
+          "SQL",
+          "Database Design",
+          "Optimization",
+          "Indexing",
+        ],
+      },
+      {
+        subCategoryName: "MySQL Dev",
+        skills: [
+          "MySQL",
+          "Stored Procedures",
+          "Replication",
+          "Optimization",
+          "SQL",
+        ],
+      },
+      {
+        subCategoryName: "MongoDB Dev",
+        skills: ["MongoDB", "NoSQL", "Aggregation", "Mongoose", "Node.js"],
+      },
+      {
+        subCategoryName: "Redis Specialist",
+        skills: ["Redis", "Caching", "Pub/Sub", "Performance", "Node.js"],
+      },
+      {
+        subCategoryName: "DB Architect",
+        skills: [
+          "Data Modeling",
+          "Architecture",
+          "SQL",
+          "Scalability",
+          "Optimization",
+        ],
+      },
+      {
+        subCategoryName: "REST / GraphQL API",
+        skills: ["REST API", "GraphQL", "Node.js", "Apollo", "Express.js"],
+      },
+      {
+        subCategoryName: "Microservices Eng.",
+        skills: ["Docker", "Kafka", "Microservices", "Node.js", "Kubernetes"],
+      },
+      {
+        subCategoryName: "Kafka / RabbitMQ",
+        skills: [
+          "Kafka",
+          "RabbitMQ",
+          "Event Driven",
+          "Messaging",
+          "Distributed Systems",
+        ],
+      },
+      {
+        subCategoryName: "Firebase / Supabase",
+        skills: [
+          "Firebase",
+          "Supabase",
+          "Authentication",
+          "Realtime DB",
+          "Cloud Functions",
+        ],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Networking & Infra",
+    subCategories: [
+      {
+        subCategoryName: "Network Engineer",
+        skills: ["Cisco", "Routing", "Switching", "TCP/IP", "Wireshark"],
+      },
+      {
+        subCategoryName: "Network Architect",
+        skills: [
+          "Network Design",
+          "Cisco",
+          "Juniper",
+          "Infrastructure",
+          "Security",
+        ],
+      },
+      {
+        subCategoryName: "VoIP Engineer",
+        skills: ["VoIP", "SIP", "Asterisk", "Networking", "PBX"],
+      },
+      {
+        subCategoryName: "Wireless Specialist",
+        skills: ["WiFi", "Cisco Wireless", "RF", "Networking", "Access Points"],
+      },
+      {
+        subCategoryName: "Firewall / VPN",
+        skills: ["Fortinet", "Palo Alto", "VPN", "Firewall", "Security"],
+      },
+      {
+        subCategoryName: "IT Support L1/L2/L3",
+        skills: [
+          "Windows",
+          "Linux",
+          "Troubleshooting",
+          "Helpdesk",
+          "Networking",
+        ],
+      },
+      {
+        subCategoryName: "IT Infra Manager",
+        skills: [
+          "Infrastructure",
+          "Servers",
+          "Networking",
+          "Cloud",
+          "Management",
+        ],
+      },
+      {
+        subCategoryName: "Helpdesk Tech",
+        skills: [
+          "Ticketing",
+          "Support",
+          "Windows",
+          "Troubleshooting",
+          "Active Directory",
+        ],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Product & PM",
+    subCategories: [
+      {
+        subCategoryName: "Product Manager",
+        skills: [
+          "Roadmaps",
+          "Agile",
+          "Jira",
+          "Stakeholder Management",
+          "Analytics",
+        ],
+      },
+      {
+        subCategoryName: "Technical PM",
+        skills: [
+          "Technical Planning",
+          "Agile",
+          "Scrum",
+          "Jira",
+          "Architecture",
+        ],
+      },
+      {
+        subCategoryName: "Scrum Master",
+        skills: [
+          "Scrum",
+          "Agile",
+          "Sprint Planning",
+          "Jira",
+          "Team Management",
+        ],
+      },
+      {
+        subCategoryName: "Agile Coach",
+        skills: ["Agile", "Scrum", "Kanban", "Coaching", "Leadership"],
+      },
+      {
+        subCategoryName: "Business Analyst",
+        skills: [
+          "Requirements Gathering",
+          "Documentation",
+          "SQL",
+          "Jira",
+          "Analysis",
+        ],
+      },
+      {
+        subCategoryName: "IT Consultant",
+        skills: [
+          "Consulting",
+          "IT Strategy",
+          "Cloud",
+          "Architecture",
+          "Business",
+        ],
+      },
+      {
+        subCategoryName: "Program Manager",
+        skills: [
+          "Leadership",
+          "Planning",
+          "Roadmaps",
+          "Communication",
+          "Agile",
+        ],
+      },
+      {
+        subCategoryName: "Release Manager",
+        skills: ["Release Planning", "CI/CD", "Jira", "DevOps", "Coordination"],
+      },
+    ],
+  },
+
+  {
+    categoryName: "Blockchain & Web3",
+    subCategories: [
+      {
+        subCategoryName: "Solidity Dev",
+        skills: [
+          "Solidity",
+          "Smart Contracts",
+          "Ethereum",
+          "Hardhat",
+          "Web3.js",
+        ],
+      },
+      {
+        subCategoryName: "Blockchain Architect",
+        skills: [
+          "Blockchain",
+          "Ethereum",
+          "Architecture",
+          "Security",
+          "Solidity",
+        ],
+      },
+      {
+        subCategoryName: "DeFi Developer",
+        skills: ["DeFi", "Smart Contracts", "Solidity", "Chainlink", "Web3"],
+      },
+      {
+        subCategoryName: "NFT Dev",
+        skills: ["NFT", "IPFS", "Solidity", "OpenZeppelin", "Ethereum"],
+      },
+      {
+        subCategoryName: "Web3 Frontend",
+        skills: ["React", "Ethers.js", "Web3.js", "MetaMask", "Next.js"],
+      },
+      {
+        subCategoryName: "Smart Contract Auditor",
+        skills: ["Auditing", "Solidity", "Security", "Slither", "MythX"],
+      },
+      {
+        subCategoryName: "Layer 2 Engineer",
+        skills: ["Polygon", "Optimism", "zkSync", "Ethereum", "Scaling"],
+      },
+      {
+        subCategoryName: "Metaverse Dev",
+        skills: ["Unity", "Web3", "VR", "Blockchain", "3D"],
+      },
+    ],
+  },
+];
   for (let category of jobData) {
     let jobCategory = await prisma.jobCategory.create({
       data: {
