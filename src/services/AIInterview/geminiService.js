@@ -27,14 +27,26 @@ Evaluate and return ONLY a JSON object with this exact structure:
   "skillTested": "primary skill being tested"
 }
 
-Rules for scoring:
-- 9-10: Exceptional answer with specific examples, clear structure, and deep insight
-- 7-8: Good answer with relevant points but may lack depth or specific examples
-- 5-6: Average answer, addresses the question but is vague or incomplete
-- 3-4: Poor answer, missing key points or off-topic
-- 1-2: Very poor, minimal effort or completely irrelevant
+Scoring Guidelines:
+- 9-10 → Excellent answer: highly clear, confident, structured, specific examples, strong technical depth, demonstrates senior-level thinking
+- 7-8 → Good answer: correct, relevant, well explained, shows solid understanding even if some details are missing
+- 5-6 → Average answer: partially correct, somewhat vague, lacks clarity/examples/depth
+- 3-4 → Weak answer: important gaps, confusion, weak explanation, partially off-topic
+- 0-2 → Very poor answer: incorrect, irrelevant, or minimal effort
 
-Be objective and consistent. Return ONLY the JSON object, no markdown formatting.`;
+Important Evaluation Rules:
+- Do NOT score too harshly.
+- Reward clarity, confidence, communication, and logical thinking.
+- Minor missing details should NOT heavily reduce score.
+- If the answer is strong overall, prefer 7-8 instead of 5-6.
+- Use the full scoring range naturally.
+- Only give 9-10 for truly outstanding answers.
+- Consider communication quality alongside technical accuracy.
+
+STAR Method Detection:
+- starUsed should be true if the answer includes Situation, Task, Action, or Result structure even partially.
+
+Return ONLY raw JSON.`;
 
   try {
     const completion = await openai.chat.completions.create({
