@@ -134,26 +134,28 @@ exports.submitJobOpening = async (data) => {
 
 
 
-
-
-  await prisma.job.update({
-    where: {
-      id: job.id,
-    },
-    data: {
-      aiCallQuestions: {
-        createMany: {
-          data: aiCall.questions.map((question, index) => {
-          return {
-            question: question,
-            order: index + 1,
-            isActive: true,
-            companyId: companyId,
-          };
-        }),
-      },
-    },
-  }});
+if (aiCall.questions?.length > 0) {
+ await prisma.job.update({
+   where: {
+     id: job.id,
+   },
+   data: {
+     aiCallQuestions: {
+       createMany: {
+         data: aiCall.questions.map((question, index) => {
+           return {
+             question: question,
+             order: index + 1,
+             isActive: true,
+             companyId: companyId,
+           };
+         }),
+       },
+     },
+   },
+ });
+}
+ 
   return job
 };
 
