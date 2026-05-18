@@ -47,10 +47,22 @@ exports.buildNextQuestionPrompt = (
     }
   }
 
+  const companyBlock =
+    interview.type === "COMPANY"
+      ? [
+          interview.jobDescription ? `Job description: ${interview.jobDescription}` : "",
+          interview.companyWebsiteText
+            ? `Company website content:\n${interview.companyWebsiteText}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
   return {
     system: `You are a professional ${interview.interviewerPreference.toLowerCase()} interviewer
 conducting a ${interview.interviewCategory} interview.
-${interview.type === "COMPANY" ? `Company context: ${interview.jobDescription}` : ""}
+${companyBlock}
 ${interview.additionalContext ? `Additional context: ${interview.additionalContext}` : ""}
 Candidate resume: ${interview.resumeSnapshot}
 This is question ${questionNumber} of ${totalQuestions}.

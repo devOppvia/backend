@@ -375,7 +375,14 @@ async function generateQuestionForType({
 
   const category = interview?.interviewCategory || "MIXED";
   const jd = interview?.jobDescription || "Not provided";
+  const websiteText = interview?.companyWebsiteText || "";
+  const additionalContext = interview?.additionalContext || "";
   const resume = interview?.resumeSnapshot || "Not provided";
+
+  const companySection =
+    interview?.type === "COMPANY"
+      ? `- Job Description: ${jd}${websiteText ? `\n- Company Website Content: ${websiteText}` : ""}${additionalContext ? `\n- Additional Context: ${additionalContext}` : ""}`
+      : `- Practice Focus: ${category}${additionalContext ? `\n- Additional Context: ${additionalContext}` : ""}`;
 
   const prompt = `
 You are an expert technical interviewer generating question ${questionNumber} of ${totalQuestions}.
@@ -383,7 +390,7 @@ You are an expert technical interviewer generating question ${questionNumber} of
 INTERVIEW CONTEXT:
 - Category: ${category}
 - This Question Type: ${questionType}
-- Job Description: ${jd}
+${companySection}
 - Resume: ${resume}
 
 PREVIOUS QUESTIONS ASKED:
