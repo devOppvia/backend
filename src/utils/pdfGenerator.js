@@ -893,7 +893,7 @@ return allQuestionUi;
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-            <div class="score-value">${interview?.identityVerification ? (interview.confidenceScore?.toFixed(1) ?? "N/A") : "Disabled"} ${interview?.identityVerification && <span class="score-unit">%</span>}</div>
+            <div class="score-value">${interview?.identityVerification ? (interview.confidenceScore?.toFixed(1) ?? "N/A") : "Disabled"} ${interview?.identityVerification ? `<span class="score-unit">%</span>` : ""}</div>
           </div>
         </div>
       </div>
