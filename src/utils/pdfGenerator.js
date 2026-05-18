@@ -1116,7 +1116,7 @@ return allQuestionUi;
   return fileUrl;
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────
 
 
 function escHtml(str) {
