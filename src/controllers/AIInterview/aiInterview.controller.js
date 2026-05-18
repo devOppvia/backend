@@ -103,6 +103,7 @@ exports.createInterview = async (req, res) => {
         status: "SETUP",
         voiceUsed: interviewerPreference === "FEMALE" ? "eve" : "rex",
         totalQuestions: getQuestionCount(duration),
+        companyWebsiteText: websiteContent,
       },
     });
 
