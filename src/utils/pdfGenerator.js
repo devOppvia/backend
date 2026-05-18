@@ -900,7 +900,7 @@ return allQuestionUi;
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-<div class="score-value score-value-Disabled">
+<div class="score-value ${interview?.identityVerification ?'score-value-Disabled' :''}">
   ${
     interview?.identityVerification
       ? `${interview.confidenceScore?.toFixed(1) ?? "N/A"} <span class="score-unit">%</span>`
@@ -980,8 +980,7 @@ ${
           Dominant Emotion
         </div>
         <div class="emotion-badge">
-          <span class="emotion-dot"></span> $
-          {interview.dominantEmotion ?? "N/A"}
+          <span class="emotion-dot"></span> ${interview.dominantEmotion ?? "N/A"}
         </div>
         <div style="margin-top: 16px; font-size: 12px; color: #7a9a9b">
           Confidence Score

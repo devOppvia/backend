@@ -34,8 +34,13 @@ Scoring Guidelines:
 - 3-4 → Weak answer: important gaps, confusion, weak explanation, partially off-topic
 - 0-2 → Very poor answer: incorrect, irrelevant, or minimal effort
 
+Non-Answer Detection (CRITICAL — apply FIRST):
+- If the answer is "I don't know", "idk", "no idea", "not sure", blank, or any equivalent → score 0
+- If the answer is clearly background noise, music descriptions, sound effects, or non-speech transcription (e.g. "(whirring sound)", "(clicking sound)", "(slow music)", "(wind blowing)") → score 0
+- If the answer is fewer than 5 meaningful words and contains no relevant content → score 0-1
+- These cases MUST receive 0 regardless of other rules below.
+
 Important Evaluation Rules:
-- Do NOT score too harshly.
 - Reward clarity, confidence, communication, and logical thinking.
 - Minor missing details should NOT heavily reduce score.
 - If the answer is strong overall, prefer 7-8 instead of 5-6.
@@ -65,7 +70,7 @@ Return ONLY raw JSON.`;
     
     // Validate and normalize
     return {
-      score: Math.max(0, Math.min(10, parseFloat(parsed.score) || 5)),
+      score: Math.max(0, Math.min(10, parsed.score != null ? parseFloat(parsed.score) : 5)),
       feedback: parsed.feedback || "No feedback provided",
       starUsed: Boolean(parsed.starUsed),
       skillTested: parsed.skillTested || category,
