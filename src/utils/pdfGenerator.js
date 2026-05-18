@@ -886,7 +886,7 @@ return allQuestionUi;
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-            <div class="score-value">${interview.confidenceScore?.toFixed(1) ?? "N/A"}<span class="score-unit">%</span></div>
+            <div class="score-value">${interview?.identityVerification ?  interview.confidenceScore?.toFixed(1) ?? "N/A" : "Disabled"}<span class="score-unit">%</span></div>
           </div>
         </div>
       </div>
@@ -960,11 +960,18 @@ return allQuestionUi;
       </div>
 
       <!-- CONFIDENCE & BEHAVIOR -->
-      <div class="section-title">Confidence & Behavior</div>
-      <div class="conf-row">
-        <div class="card" style="margin-bottom: 0">
-          <div
-            style="
+    ${
+      interview?.identityVerification && (
+        <div class="section-title">Confidence & Behavior</div>
+      )
+    }
+
+${
+  interview?.identityVerification && (
+    <div class="conf-row">
+      <div class="card" style="margin-bottom: 0">
+        <div
+          style="
               font-size: 12px;
               color: #7a9a9b;
               font-weight: 500;
@@ -972,30 +979,31 @@ return allQuestionUi;
               text-transform: uppercase;
               margin-bottom: 6px;
             "
-          >
-            Dominant Emotion
-          </div>
-          <div class="emotion-badge">
-            <span class="emotion-dot"></span> ${interview.dominantEmotion ?? "N/A"}
-          </div>
-          <div style="margin-top: 16px; font-size: 12px; color: #7a9a9b">
-            Confidence Score
-          </div>
-          <div
-            style="
+        >
+          Dominant Emotion
+        </div>
+        <div class="emotion-badge">
+          <span class="emotion-dot"></span> $
+          {interview.dominantEmotion ?? "N/A"}
+        </div>
+        <div style="margin-top: 16px; font-size: 12px; color: #7a9a9b">
+          Confidence Score
+        </div>
+        <div
+          style="
               font-family:'Inter', system-ui, -apple-system, sans-serif;
               font-size: 28px;
               font-weight: 800;
               color: var(--dark);
               margin-top: 4px;
             "
-          >
-            ${interview.confidenceScore?.toFixed(1) ?? "N/A"}%
-          </div>
+        >
+          ${interview.confidenceScore?.toFixed(1) ?? "N/A"}%
         </div>
-        <div class="card" style="margin-bottom: 0">
-          <div
-            style="
+      </div>
+      <div class="card" style="margin-bottom: 0">
+        <div
+          style="
               font-size: 12px;
               color: #7a9a9b;
               font-weight: 500;
@@ -1003,48 +1011,50 @@ return allQuestionUi;
               text-transform: uppercase;
               margin-bottom: 12px;
             "
-          >
-            Emotion Breakdown
+        >
+          Emotion Breakdown
+        </div>
+        <div class="bar-group">
+          <div class="bar-item">
+            <span class="bar-item-label">Confident</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.confident}%"></div>
+            </div>
+            <span class="bar-pct">${beh.confident ?? 0}%</span>
           </div>
-          <div class="bar-group">
-            <div class="bar-item">
-              <span class="bar-item-label">Confident</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: ${beh.confident}%"></div>
-              </div>
-              <span class="bar-pct">${beh.confident ?? 0}%</span>
+          <div class="bar-item">
+            <span class="bar-item-label">Nervous</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.nervous}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Nervous</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: ${beh.nervous}%"></div>
-              </div>
-              <span class="bar-pct">${beh.nervous ?? 0}%</span>
+            <span class="bar-pct">${beh.nervous ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Neutral</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.neutral}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Neutral</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: ${beh.neutral}%"></div>
-              </div>
-              <span class="bar-pct">${beh.neutral ?? 0}%</span>
+            <span class="bar-pct">${beh.neutral ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Happy</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.happy}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Happy</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: ${beh.happy}%"></div>
-              </div>
-              <span class="bar-pct">${beh.happy ?? 0}%</span>
+            <span class="bar-pct">${beh.happy ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Confused</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.confused}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Confused</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: ${beh.confused}%"></div>
-              </div>
-              <span class="bar-pct">${beh.confused ?? 0}%</span>
-            </div>
+            <span class="bar-pct">${beh.confused ?? 0}%</span>
           </div>
         </div>
       </div>
+    </div>
+  )
+}
 
       <!-- AI PERFORMANCE INSIGHTS -->
       <div class="section-title" style="margin-top: 28px">

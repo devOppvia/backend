@@ -6,7 +6,7 @@ const openai = new OpenAI({
 });
 
 // ─── Scoring Function ───────────────────────────────────────────────────────
-async function scoreWithGemini({ question, answer, category, history }) {
+async function  scoreWithGemini({ question, answer, category, history }) {
   const historyText = history?.length
     ? history.map((h) => `Q: ${h.question}\nA: ${h.answer}`).join("\n\n")
     : "None";
