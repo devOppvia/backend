@@ -87,6 +87,7 @@ exports.createInterview = async (req, res) => {
     }
 
     console.log("company website extracted text is : " , websiteContent)
+    console.log("Type of : " ,typeof(websiteContent))
 
     const interview = await prisma.aIInterview.create({
       data: {
