@@ -1,4 +1,5 @@
-<!doctype html>
+
+ <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -8,7 +9,7 @@
       href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
       rel="stylesheet"
     />
-    <style>
+  <style>
       :root {
         --dark: #0a3031;
         --dark-mid: #0d3e3f;
@@ -33,7 +34,7 @@
       }
 
       body {
-        font-family: "DM Sans", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         background: var(--off-white);
         color: var(--dark);
         min-height: 100vh;
@@ -78,7 +79,7 @@
       }
 
       .logo-name {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-weight: 800;
         font-size: 22px;
         color: var(--white);
@@ -86,7 +87,7 @@
       }
 
       .header-badge {
-        font-family: "DM Sans", sans-serif;
+        font-family:'Inter', system-ui, -apple-system, sans-serif;
         font-size: 12px;
         font-weight: 500;
         color: var(--muted);
@@ -151,7 +152,7 @@
       }
 
       .hero-candidate {
-        font-family: "Syne", sans-serif;
+        font-family:'Inter', system-ui, -apple-system, sans-serif;
         font-size: 38px;
         font-weight: 800;
         color: var(--white);
@@ -213,7 +214,7 @@
       }
 
       .score-value {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 30px;
         font-weight: 800;
         color: var(--white);
@@ -236,7 +237,7 @@
 
       /* Section headers */
       .section-title {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.14em;
@@ -302,7 +303,7 @@
       }
 
       .perf-tile-value {
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 22px;
         font-weight: 700;
         color: var(--dark);
@@ -325,7 +326,7 @@
         border: 1px solid rgba(10, 48, 49, 0.12);
         border-radius: 8px;
         padding: 8px 14px;
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 14px;
         font-weight: 700;
         color: var(--dark);
@@ -406,7 +407,7 @@
         background: var(--dark);
         color: var(--white);
         border-radius: 8px;
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 13px;
         font-weight: 700;
         display: flex;
@@ -429,6 +430,7 @@
         overflow: hidden;
         box-shadow: var(--shadow);
         margin-bottom: 20px;
+
       }
 
       .qa-header {
@@ -442,7 +444,7 @@
       .qa-num {
         background: rgba(255, 255, 255, 0.12);
         color: var(--white);
-        font-family: "Syne", sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
         font-size: 12px;
         font-weight: 700;
         padding: 4px 10px;
@@ -615,7 +617,7 @@
     <div class="hero">
       <div class="hero-inner">
         <div class="report-label"><span></span>AI-Powered Assessment</div>
-        <div class="hero-candidate">Sarah Johnson</div>
+        <div class="hero-candidate">${intern?.fullName}</div>
         <div class="hero-meta">
           <div class="hero-meta-item">
             <svg
@@ -659,7 +661,7 @@
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
             </svg>
-            Duration: 1 min
+            Duration: ${interview.durationActual ?? "N/A"} min
           </div>
         </div>
 
@@ -668,18 +670,18 @@
           <div class="score-cell">
             <div class="score-label">Overall Score</div>
             <div class="score-value">
-              0.0 <span class="score-unit">/ 100</span>
+            ${interview.overallScore?.toFixed(1) ?? "N/A"} <span class="score-unit">/ 100</span>
             </div>
           </div>
           <div class="score-cell">
             <div class="score-label">Avg Answer Score</div>
             <div class="score-value">
-              0.0 <span class="score-unit">/ 100</span>
+              ${interview.avgAnswerScore?.toFixed(1) ?? "N/A"} <span class="score-unit">/ 100</span>
             </div>
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-            <div class="score-value">0.0 <span class="score-unit">%</span></div>
+            <div class="score-value">${interview?.identityVerification ?  interview.confidenceScore?.toFixed(1) ?? "N/A" : "Disabled"}<span class="score-unit">%</span></div>
           </div>
         </div>
       </div>
@@ -705,7 +707,7 @@
             </svg>
           </div>
           <div class="perf-tile-label">Total Questions</div>
-          <div class="perf-tile-value">1</div>
+          <div class="perf-tile-value">${interview.totalQuestions ?? "N/A"}</div>
         </div>
         <div class="perf-tile">
           <div class="perf-tile-icon">
@@ -724,9 +726,9 @@
           </div>
           <div class="perf-tile-label">STAR Used</div>
           <div class="perf-tile-value">
-            0
+            ${interview.starUsed ?? 0} /
             <span style="font-size: 14px; color: #7a9a9b; font-weight: 400"
-              >/ 1</span
+              >${interview.totalQuestions ?? 0}</span
             >
           </div>
         </div>
@@ -747,17 +749,24 @@
           </div>
           <div class="perf-tile-label">Top Skill</div>
           <div class="perf-tile-value" style="font-size: 17px">
-            Communication
+           ${interview.topSkill ?? "N/A"}
           </div>
         </div>
       </div>
 
       <!-- CONFIDENCE & BEHAVIOR -->
-      <div class="section-title">Confidence & Behavior</div>
-      <div class="conf-row">
-        <div class="card" style="margin-bottom: 0">
-          <div
-            style="
+    ${
+      interview?.identityVerification && (
+        <div class="section-title">Confidence & Behavior</div>
+      )
+    }
+
+${
+  interview?.identityVerification && (
+    <div class="conf-row">
+      <div class="card" style="margin-bottom: 0">
+        <div
+          style="
               font-size: 12px;
               color: #7a9a9b;
               font-weight: 500;
@@ -765,30 +774,31 @@
               text-transform: uppercase;
               margin-bottom: 6px;
             "
-          >
-            Dominant Emotion
-          </div>
-          <div class="emotion-badge">
-            <span class="emotion-dot"></span>Confident
-          </div>
-          <div style="margin-top: 16px; font-size: 12px; color: #7a9a9b">
-            Confidence Score
-          </div>
-          <div
-            style="
-              font-family: &quot;Syne&quot;, sans-serif;
+        >
+          Dominant Emotion
+        </div>
+        <div class="emotion-badge">
+          <span class="emotion-dot"></span> $
+          {interview.dominantEmotion ?? "N/A"}
+        </div>
+        <div style="margin-top: 16px; font-size: 12px; color: #7a9a9b">
+          Confidence Score
+        </div>
+        <div
+          style="
+              font-family:'Inter', system-ui, -apple-system, sans-serif;
               font-size: 28px;
               font-weight: 800;
               color: var(--dark);
               margin-top: 4px;
             "
-          >
-            0.0%
-          </div>
+        >
+          ${interview.confidenceScore?.toFixed(1) ?? "N/A"}%
         </div>
-        <div class="card" style="margin-bottom: 0">
-          <div
-            style="
+      </div>
+      <div class="card" style="margin-bottom: 0">
+        <div
+          style="
               font-size: 12px;
               color: #7a9a9b;
               font-weight: 500;
@@ -796,48 +806,50 @@
               text-transform: uppercase;
               margin-bottom: 12px;
             "
-          >
-            Emotion Breakdown
+        >
+          Emotion Breakdown
+        </div>
+        <div class="bar-group">
+          <div class="bar-item">
+            <span class="bar-item-label">Confident</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.confident}%"></div>
+            </div>
+            <span class="bar-pct">${beh.confident ?? 0}%</span>
           </div>
-          <div class="bar-group">
-            <div class="bar-item">
-              <span class="bar-item-label">Confident</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
-              </div>
-              <span class="bar-pct">0%</span>
+          <div class="bar-item">
+            <span class="bar-item-label">Nervous</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.nervous}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Nervous</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
-              </div>
-              <span class="bar-pct">0%</span>
+            <span class="bar-pct">${beh.nervous ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Neutral</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.neutral}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Neutral</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
-              </div>
-              <span class="bar-pct">0%</span>
+            <span class="bar-pct">${beh.neutral ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Happy</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.happy}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Happy</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
-              </div>
-              <span class="bar-pct">0%</span>
+            <span class="bar-pct">${beh.happy ?? 0}%</span>
+          </div>
+          <div class="bar-item">
+            <span class="bar-item-label">Confused</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: ${beh.confused}%"></div>
             </div>
-            <div class="bar-item">
-              <span class="bar-item-label">Confused</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: 0%"></div>
-              </div>
-              <span class="bar-pct">0%</span>
-            </div>
+            <span class="bar-pct">${beh.confused ?? 0}%</span>
           </div>
         </div>
       </div>
+    </div>
+  )
+}
 
       <!-- AI PERFORMANCE INSIGHTS -->
       <div class="section-title" style="margin-top: 28px">
@@ -848,29 +860,19 @@
           <div class="insight-item">
             <div class="insight-num">1</div>
             <div class="insight-text">
-              It appears that you may have struggled with articulating your
-              experiences during the interview. Consider practicing storytelling
-              techniques to better convey your past experiences, especially in
-              conflict resolution scenarios.
+              ${interview.aiInsights[0]}
             </div>
           </div>
           <div class="insight-item">
             <div class="insight-num">2</div>
             <div class="insight-text">
-              Your score indicates a need to prepare specific examples of
-              conflict resolution from your past work. Reflect on any relevant
-              situations and structure your responses using the
-              <strong>STAR</strong> (Situation, Task, Action, Result) method to
-              provide clarity and depth.
+               ${interview.aiInsights[1]}
             </div>
           </div>
           <div class="insight-item">
             <div class="insight-num">3</div>
             <div class="insight-text">
-              For future interviews, consider engaging in mock interviews with a
-              friend or mentor to build confidence and improve your ability to
-              communicate effectively. This practice can help you feel more
-              comfortable discussing challenging topics like team conflicts.
+               ${interview.aiInsights[2]}
             </div>
           </div>
         </div>
@@ -880,196 +882,11 @@
       <div class="section-title" style="margin-top: 4px">
         Question-by-Question Breakdown
       </div>
-      <div class="qa-card">
-        <div class="qa-header">
-          <span class="qa-num">Q1</span>
-          <span class="qa-question"
-            >Describe a situation where you had to resolve a conflict within
-            your development team while working on a project.</span
-          >
-        </div>
-        <div class="qa-body">
-          <div class="qa-tags">
-            <span class="tag tag-skill">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path
-                  d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                />
-              </svg>
-              Skill: Communication
-            </span>
-            <span class="tag tag-star-no">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              STAR: Not Used
-            </span>
-            <span class="tag tag-score-na">Score: N/A / 10</span>
-          </div>
-          <div class="qa-answer-block">No answer provided</div>
-          <div class="qa-feedback">
-            <strong style="color: #2a4a4b">Feedback:</strong> N/A
-          </div>
-        </div>
-      </div>
-       <div class="qa-card">
-        <div class="qa-header">
-          <span class="qa-num">Q1</span>
-          <span class="qa-question"
-            >Describe a situation where you had to resolve a conflict within
-            your development team while working on a project.</span
-          >
-        </div>
-        <div class="qa-body">
-          <div class="qa-tags">
-            <span class="tag tag-skill">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path
-                  d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                />
-              </svg>
-              Skill: Communication
-            </span>
-            <span class="tag tag-star-no">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              STAR: Not Used
-            </span>
-            <span class="tag tag-score-na">Score: N/A / 10</span>
-          </div>
-          <div class="qa-answer-block">No answer provided</div>
-          <div class="qa-feedback">
-            <strong style="color: #2a4a4b">Feedback:</strong> N/A
-          </div>
-        </div>
-      </div>
-       <div class="qa-card">
-        <div class="qa-header">
-          <span class="qa-num">Q1</span>
-          <span class="qa-question"
-            >Describe a situation where you had to resolve a conflict within
-            your development team while working on a project.</span
-          >
-        </div>
-        <div class="qa-body">
-          <div class="qa-tags">
-            <span class="tag tag-skill">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <path
-                  d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                />
-              </svg>
-              Skill: Communication
-            </span>
-            <span class="tag tag-star-no">
-              <svg
-                width="11"
-                height="11"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2.5"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              STAR: Not Used
-            </span>
-            <span class="tag tag-score-na">Score: N/A / 10</span>
-          </div>
-          <div class="qa-answer-block">No answer provided</div>
-          <div class="qa-feedback">
-            <strong style="color: #2a4a4b">Feedback:</strong> N/A
-          </div>
-        </div>
-      </div>  
+
+
+     ${generateQuestionUi()}
     </div>
 
-    <!-- ── FOOTER ── -->
-    <footer>
-      <div class="footer-logo">
-        <svg
-          height="48"
-          width="222"
-          fill="none"
-          viewBox="0 0 222 48"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M47.5835 7.13753V46.6772C47.5835 47.187 47.187 47.5835 46.6772 47.5835H41.0125C40.5027 47.5835 40.1061 47.187 40.1061 46.6772V8.38378C40.1061 7.87395 39.7096 7.47742 39.1998 7.47742H0.906357C0.396533 7.47742 0 7.08089 0 6.57106V0.906357C0 0.396533 0.396533 0 0.906357 0H40.446C40.9558 0 41.3524 0.396533 41.3524 0.906357V5.32482C41.3524 5.83465 41.7489 6.23118 42.2587 6.23118H46.6772C47.187 6.23118 47.5835 6.62771 47.5835 7.13753Z"
-            fill="white"
-          />
-          <path
-            d="M35.8576 16.9957L5.83462 46.962C5.49474 47.3019 4.87161 47.3019 4.53173 46.962L0.566435 42.8835C0.226553 42.5436 0.226553 41.9771 0.566435 41.5806C10.593 31.6107 20.5629 21.6408 30.5894 11.6709C30.9293 11.331 31.5524 11.331 31.8923 11.6709L35.9142 15.6929C36.2541 16.0328 36.2541 16.6559 35.8576 16.9957Z"
-            fill="white"
-          />
-          <path
-            d="M75.6813 8.44141C77.9472 8.44141 79.9299 8.83794 81.7426 9.68765C83.5553 10.5374 85.0848 11.7269 86.331 13.2564C87.5772 14.7859 88.5969 16.7119 89.22 18.9211C89.8997 21.1304 90.2396 23.6228 90.2396 26.3985C90.2396 29.1176 89.8997 31.4968 89.22 33.6494C88.5402 35.8019 87.5772 37.6147 86.3876 39.0875C85.1414 40.5603 83.6119 41.6932 81.7992 42.4863C79.9865 43.2794 77.9472 43.6759 75.6813 43.6759C73.4155 43.6759 71.3762 43.2794 69.5635 42.4863C67.7508 41.6932 66.2213 40.5603 64.975 39.0875C63.7288 37.6147 62.7658 35.8019 62.1427 33.6494C61.4629 31.4968 61.123 29.1176 61.123 26.3985C61.123 23.6228 61.4629 21.1304 62.1427 18.9211C62.8225 16.7119 63.7855 14.8425 65.0317 13.2564C66.2779 11.7269 67.8074 10.5374 69.6201 9.68765C71.4328 8.83794 73.4155 8.44141 75.6813 8.44141ZM75.6813 38.9175C78.8536 38.9175 81.2894 37.8412 82.9888 35.7453C84.6882 33.6494 85.4813 30.4771 85.4813 26.2852C85.4813 22.0367 84.6316 18.8078 82.9322 16.5419C81.2328 14.2761 78.7969 13.1431 75.6247 13.1431C72.4524 13.1431 70.0166 14.2761 68.3172 16.5419C66.6178 18.8078 65.7681 22.0367 65.7681 26.2852C65.7681 30.4771 66.6178 33.5927 68.2606 35.7453C70.0166 37.8412 72.4525 38.9175 75.6813 38.9175Z"
-            fill="white"
-          />
-          <path
-            d="M108.197 30.5904H98.9634V43.166H94.2051L94.1484 13.3696C94.1484 10.424 95.6213 8.89453 98.6236 8.89453H107.291C110.916 8.89453 113.805 9.80088 115.844 11.6702C117.884 13.5396 118.903 16.1453 118.903 19.4875C118.903 21.0736 118.62 22.4898 118.11 23.8494C117.6 25.2089 116.807 26.3985 115.844 27.3615C114.881 28.3811 113.748 29.1175 112.445 29.684C111.143 30.3071 109.726 30.5904 108.197 30.5904ZM98.9634 25.832H106.951C109.217 25.832 110.973 25.2655 112.219 24.1892C113.465 23.1129 114.088 21.5268 114.088 19.5442C114.088 15.6922 111.709 13.7095 106.951 13.7095H98.9634V25.832Z"
-            fill="white"
-          />
-          <path
-            d="M136.803 30.5904H127.57V43.166H122.812L122.755 13.3696C122.755 10.424 124.228 8.89453 127.23 8.89453H135.897C139.522 8.89453 142.411 9.80088 144.451 11.6702C146.49 13.5396 147.51 16.1453 147.51 19.4875C147.51 21.0736 147.226 22.4898 146.717 23.8494C146.207 25.2089 145.414 26.3985 144.451 27.3615C143.488 28.3811 142.355 29.1175 141.052 29.684C139.749 30.3071 138.333 30.5904 136.803 30.5904ZM127.57 25.832H135.5C137.766 25.832 139.522 25.2655 140.769 24.1892C142.015 23.1129 142.638 21.5268 142.638 19.5442C142.638 15.6922 140.259 13.7095 135.5 13.7095H127.57V25.832Z"
-            fill="white"
-          />
-          <path
-            d="M164.73 43.6211C161.955 43.6211 159.802 42.6581 158.216 40.7888C156.63 38.8628 155.384 35.9171 154.477 31.8385L149.436 8.95312H154.251L159.349 31.9518C159.632 33.1981 159.915 34.2744 160.198 35.1241C160.482 36.0304 160.878 36.7102 161.275 37.2767C161.671 37.7865 162.181 38.183 162.691 38.4662C163.257 38.6928 163.937 38.8061 164.674 38.8061C165.41 38.8061 166.146 38.6928 166.656 38.4662C167.223 38.2396 167.676 37.8431 168.129 37.2767C168.526 36.7668 168.922 36.0304 169.205 35.1241C169.489 34.2177 169.772 33.1981 170.112 31.9518L175.21 8.95312H180.025L174.983 31.8385C174.53 33.8778 174.02 35.6339 173.397 37.1634C172.774 38.6362 172.094 39.8824 171.245 40.8454C170.452 41.8084 169.489 42.5448 168.412 42.998C167.393 43.3945 166.146 43.6211 164.73 43.6211Z"
-            fill="white"
-          />
-          <path
-            d="M183.027 8.95312H187.842V43.168H183.027V8.95312Z"
-            fill="white"
-          />
-          <path
-            d="M206.649 8.44141C208.065 8.44141 209.312 8.668 210.388 9.17783C211.464 9.63101 212.427 10.3674 213.22 11.3304C214.013 12.2934 214.75 13.5396 215.373 15.0125C215.996 16.4853 216.506 18.2413 216.959 20.3373L222.001 43.2227H217.186L212.087 20.224C211.804 18.9778 211.521 17.9015 211.181 17.0518C210.898 16.1454 210.501 15.4657 210.105 14.8992C209.708 14.3894 209.198 13.9928 208.632 13.7096C208.065 13.483 207.386 13.3697 206.649 13.3697C205.856 13.3697 205.176 13.483 204.667 13.7096C204.1 13.9362 203.647 14.3327 203.25 14.8992C202.854 15.409 202.457 16.1454 202.174 17.0518C201.891 17.9581 201.551 18.9778 201.324 20.224L196.226 43.2227H191.411L196.453 20.3373C197.359 16.2587 198.605 13.2564 200.191 11.3871C201.721 9.40441 203.873 8.44141 206.649 8.44141ZM217.016 28.5511V33.3661H195.49V28.5511H217.016Z"
-            fill="white"
-          />
-        </svg>
-      </div>
-      <span class="footer-copy"
-        >© 2026 Opvia · Confidential Interview Report</span
-      >
-    </footer>
+  
   </body>
 </html>
