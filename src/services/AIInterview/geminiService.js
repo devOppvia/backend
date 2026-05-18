@@ -92,18 +92,29 @@ async function generateNextQuestionWithGemini({ interview, history, questionNumb
   const rotation = getQuestionRotation(totalQuestions);
   const forcedType = rotation?.[questionNumber - 1];
 
+  const websiteText = interview?.companyWebsiteText || "";
+  const additionalContext = interview?.additionalContext || "";
+  const contextParts = [];
+  if (interview?.jobDescription) contextParts.push(`Job Description:\n${interview.jobDescription}`);
+  if (websiteText) contextParts.push(`Company Website Content:\n${websiteText}`);
+  if (additionalContext) contextParts.push(`Additional Context:\n${additionalContext}`);
+  const contextSection = contextParts.length ? contextParts.join("\n\n") : `Practice Focus: ${category}`;
+
   const prompt = `
 You are generating interview question ${questionNumber} of ${totalQuestions}.
 
-Job Description: ${interview?.jobDescription || "Not provided"}
 Resume: ${interview?.resumeSnapshot || "Not provided"}
 Interview Category: ${category}
+
+${contextSection}
+
 Previous Questions Asked:
 ${previousQuestions}
 
 ${forcedType ? `FOR THIS QUESTION: Generate a ${forcedType} type question.` : ""}
 
 Generate a ${category.toLowerCase()} interview question that:
+- Is grounded in the job description, company context, or candidate's resume above — do NOT ask generic questions
 - Tests different skills than previous questions
 - Is appropriate for the candidate's experience level
 - Is concise — ONE sentence or TWO short sentences maximum, 20 words or fewer
@@ -240,18 +251,27 @@ async function generateFirstQuestion(interview, totalQuestions) {
   const category = interview?.interviewCategory || "MIXED";
   const rotation = getQuestionRotation(totalQuestions);
   const firstType = rotation?.[0] || "RESUME_BASED";
+  const websiteText = interview?.companyWebsiteText || "";
+  const additionalContext = interview?.additionalContext || "";
+
+  const contextParts = [];
+  if (interview?.jobDescription) contextParts.push(`Job Description:\n${interview.jobDescription}`);
+  if (websiteText) contextParts.push(`Company Website Content:\n${websiteText}`);
+  if (additionalContext) contextParts.push(`Additional Context:\n${additionalContext}`);
+  const contextSection = contextParts.length ? contextParts.join("\n\n") : `Practice Focus: ${category}`;
 
   const prompt = `
 You are a professional interviewer creating the opening question for an interview.
 
-Job Description: ${interview?.jobDescription || "Not provided"}
 Resume: ${interview?.resumeSnapshot || "Not provided"}
 Interview Category: ${category}
 This is question 1 of ${totalQuestions}.
 
+${contextSection}
+
 Generate a strong opening ${firstType} question that:
+- Is grounded in the job description, company context, or candidate's resume above
 - Makes a positive first impression
-- Is relevant to the candidate's background
 - Sets the tone for a professional interview
 - Is engaging but not overly complex
 
@@ -299,20 +319,30 @@ async function generateAllQuestions({ interview, totalQuestions }) {
   const category = interview?.interviewCategory || "MIXED";
   const questions = [];
   
+  const websiteText = interview?.companyWebsiteText || "";
+  const additionalContext = interview?.additionalContext || "";
+  const contextParts = [];
+  if (interview?.jobDescription) contextParts.push(`Job Description:\n${interview.jobDescription}`);
+  if (websiteText) contextParts.push(`Company Website Content:\n${websiteText}`);
+  if (additionalContext) contextParts.push(`Additional Context:\n${additionalContext}`);
+  const contextSection = contextParts.length ? contextParts.join("\n\n") : `Practice Focus: ${category}`;
+
   const prompt = `
 You are generating ALL ${totalQuestions} interview questions for a ${category} interview.
 
-Job Description: ${interview?.jobDescription || "Not provided"}
 Resume: ${interview?.resumeSnapshot || "Not provided"}
 Interview Category: ${category}
 Duration: ${interview?.duration || 15} minutes
 
+${contextSection}
+
 Generate ${totalQuestions} interview questions that:
-1. Cover different skills and topics
-2. Progress from general to specific
-3. Are appropriate for the candidate's experience level
-4. Take 1-2 minutes each to answer
-5. Test a variety of: technical skills, behavioral traits, situational judgment, culture fit
+1. Are grounded in the job description, company context, and candidate resume above — reference specific skills, technologies, values, or experiences
+2. Cover different skills and topics
+3. Progress from general to specific
+4. Are appropriate for the candidate's experience level
+5. Take 1-2 minutes each to answer
+6. Test a variety of: technical skills, behavioral traits, situational judgment, culture fit relevant to this role
 
 Return ONLY a JSON array with ${totalQuestions} objects, each with this structure:
 [
@@ -379,42 +409,57 @@ async function generateQuestionForType({
   const additionalContext = interview?.additionalContext || "";
   const resume = interview?.resumeSnapshot || "Not provided";
 
-  const companySection =
-    interview?.type === "COMPANY"
-      ? `- Job Description: ${jd}${websiteText ? `\n- Company Website Content: ${websiteText}` : ""}${additionalContext ? `\n- Additional Context: ${additionalContext}` : ""}`
-      : `- Practice Focus: ${category}${additionalContext ? `\n- Additional Context: ${additionalContext}` : ""}`;
+  const contextParts = [];
+  if (jd && jd !== "Not provided") contextParts.push(`Job Description:\n${jd}`);
+  if (websiteText) contextParts.push(`Company Website Content:\n${websiteText}`);
+  if (additionalContext) contextParts.push(`Additional Context:\n${additionalContext}`);
+  const contextSection = contextParts.length
+    ? contextParts.join("\n\n")
+    : interview?.type !== "COMPANY"
+      ? `Practice Focus: ${category}`
+      : "No additional context provided";
+
+  const typeInstructions = {
+    BEHAVIORAL: 'Start with "Tell me about a time..." or "Describe a situation where..." — draw from the resume or JD context if available.',
+    TECHNICAL: "Ask about one specific concept, tool, technology, or approach mentioned in the JD or resume. Keep it focused.",
+    SITUATIONAL: "Describe a realistic work scenario in one short sentence (tie it to the JD/company context if possible), then ask what they would do.",
+    CLOSING: "Ask one simple closing question about their interest in this specific role/company or their availability.",
+    HR_CULTURE_FIT: "Ask about values, work style, team dynamics, or motivation — tie it directly to the company culture from the website content or job description if available.",
+    RESUME_BASED: "Ask specifically about a project, experience, skill, or achievement mentioned in the candidate's resume.",
+    PROJECT_DEEP_DIVE: "Ask for a deep explanation of a specific project from the resume — their role, technical decisions made, or outcomes.",
+    CASE_STUDY: "Present a short business or technical scenario relevant to the role (one sentence) and ask how they would approach it.",
+    CODING_DSA: "Ask a concise data structures or algorithms question relevant to the technical stack in the JD.",
+    SYSTEM_DESIGN: "Ask the candidate to design or architect a system or component relevant to the company's domain.",
+    DEBUGGING: "Describe a short hypothetical bug scenario relevant to their tech stack and ask how they would debug it.",
+  };
+
+  const typeInstruction = typeInstructions[questionType] || `Generate a question appropriate for a ${questionType} interview.`;
 
   const prompt = `
-You are an expert technical interviewer generating question ${questionNumber} of ${totalQuestions}.
+You are an expert interviewer generating question ${questionNumber} of ${totalQuestions}.
 
-INTERVIEW CONTEXT:
-- Category: ${category}
-- This Question Type: ${questionType}
-${companySection}
-- Resume: ${resume}
+=== INTERVIEW CONTEXT ===
+Category: ${category}
+Question Type: ${questionType}
+Resume: ${resume}
 
-PREVIOUS QUESTIONS ASKED:
+${contextSection}
+
+=== PREVIOUS QUESTIONS (do NOT repeat these) ===
 ${previousText}
 
-YOUR TASK:
-Generate a ${questionType} interview question that:
-1. Is appropriate for a ${questionType.toLowerCase()} interview
-2. Tests different skills than previous questions
-3. Matches the candidate's experience level from their resume
-4. Is concise — ONE sentence or TWO short sentences maximum
-5. Is direct and conversational, as if asked face-to-face by a human interviewer
-
-STRICT LENGTH RULE: The question must be 20 words or fewer. No long setups, no multi-part questions, no preamble.
-
-${questionType === 'BEHAVIORAL' ? 'Start with "Tell me about a time..." or "Describe a situation where..."' : ''}
-${questionType === 'TECHNICAL' ? 'Ask about one specific concept, tool, or approach. Keep it focused.' : ''}
-${questionType === 'SITUATIONAL' ? 'Describe the scenario in one short sentence, then ask what they would do.' : ''}
-${questionType === 'CLOSING' ? 'Ask one simple closing question about their interest or availability.' : ''}
+=== YOUR TASK ===
+Generate a SINGLE ${questionType} question. Important rules:
+1. ${typeInstruction}
+2. The question MUST be grounded in the context above — reference the job role, company, required skills, or candidate background. Do NOT ask a generic question.
+3. Tests a different skill than all previous questions listed above.
+4. Is concise — ONE sentence or TWO short sentences maximum, 20 words or fewer.
+5. Is direct and conversational, as if asked face-to-face.
 
 Return ONLY a JSON object:
 {
-  "question": "The question text — short and direct",
-  "skillTested": "Specific skill being assessed (e.g., Leadership, React, Communication)"
+  "question": "The question text — short, direct, and context-grounded",
+  "skillTested": "Specific skill being assessed (e.g., Leadership, React, Communication, Culture Fit)"
 }
 `;
 
