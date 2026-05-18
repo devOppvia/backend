@@ -83,7 +83,7 @@ exports.createInterview = async (req, res) => {
 
     let websiteContent
     if(companyWebsite) {
-       websiteContent = extractContentFromUrl(companyWebsite)
+       websiteContent = await extractContentFromUrl(companyWebsite)
     }
 
     console.log("company website extracted text is : " , websiteContent)
