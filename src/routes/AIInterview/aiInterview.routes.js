@@ -7,6 +7,9 @@ const resultController = require("../../controllers/AIInterview/aiInterviewResul
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ─── Utilities ────────────────────────────────────────────────────────────────
+router.post("/extract-url", authMiddleware, controller.extractUrl);
+
 // ─── Interview Lifecycle ──────────────────────────────────────────────────────
 router.post("/create", authMiddleware, controller.createInterview);
 router.post("/:id/start", authMiddleware, controller.startInterview);

@@ -856,6 +856,7 @@ model AIInterview {
   duration              Int                      // planned duration in mins
   jobDescription        String?                  // only for COMPANY type
   companyWebsite        String?                  // only for COMPANY type
+  companyWebsiteText    String?
   additionalContext     String?
   resumeSnapshot        String                   // extracted resume text at session start
   status                AIInterviewStatus        @default(SETUP)

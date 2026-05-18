@@ -5,6 +5,7 @@ const internSubscriptionService = require("../../services/InternSubscription/int
 const geminiService = require("../../services/AIInterview/geminiService");
 const elevenLabsService = require("../../services/AIInterview/elevenLabsService");
 const { generateInterviewPDF } = require("../../utils/pdfGenerator");
+const { extractContentFromUrl } = require("../../helpers/urlContentExtractor");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,27 @@ const getTopSkill = (questions) => {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 };
 
+// ─── POST /ai-interview/extract-url ──────────────────────────────────────────
+exports.extractUrl = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return errorResponse(res, "URL is required", 400);
+
+    const result = await extractContentFromUrl(url);
+    if (!result.success) return errorResponse(res, result.error || "Failed to extract content", 422);
+
+    return successResponse(
+      res,
+      { content: result.content, title: result.title },
+      "Content extracted successfully",
+      200,
+    );
+  } catch (error) {
+    console.error("Extract URL error:", error);
+    return errorResponse(res, "Failed to extract content from URL", 500);
+  }
+};
+
 // ─── POST /ai-interview/create ────────────────────────────────────────────────
 exports.createInterview = async (req, res) => {
   try {
@@ -58,6 +80,13 @@ exports.createInterview = async (req, res) => {
     if (!interviewCategory) return errorResponse(res, "Interview category is required", 400);
     if (type === "COMPANY" && !jobDescription)
       return errorResponse(res, "Job description is required for COMPANY interviews", 400);
+
+    let websiteContent
+    if(companyWebsite) {
+       websiteContent = extractContentFromUrl(companyWebsite)
+    }
+
+    console.log("company website extracted text is : " , websiteContent)
 
     const interview = await prisma.aIInterview.create({
       data: {
