@@ -962,7 +962,7 @@ return allQuestionUi;
       <!-- CONFIDENCE & BEHAVIOR -->
     ${
       interview?.identityVerification && (
-        <div class="section-title">Confidence & Behavior</div>
+        `<div class="section-title">Confidence & Behavior</div>`
       )
     }
 
