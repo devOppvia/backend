@@ -150,7 +150,10 @@ exports.generateInterviewPDF = async (
   const fileName = `interview_${interview.id}_${Date.now()}.pdf`;
   const filePath = path.join(UPLOAD_DIR, fileName);
   const fileUrl = `/uploads/pdf/${fileName}`;
-   console.log("interview identityVerification : ", identityVerification);
+   console.log(
+     "interview identityVerification : ",
+     interview?.identityVerification,
+   );
   const beh = interview.behaviorSummary || {};
   const insights = interview.aiInsights || [];
 
