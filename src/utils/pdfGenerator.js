@@ -429,6 +429,13 @@ return allQuestionUi;
         line-height: 1;
       }
 
+       .score-value-Disabled {
+        margin-top: auto;
+        font-size: 26px;
+        opacity: 0.8;
+        font-weight: 400;
+      }
+
       .score-value .score-unit {
         font-size: 14px;
         font-weight: 400;
@@ -893,7 +900,7 @@ return allQuestionUi;
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-<div class="score-value">
+<div class="score-value score-value-Disabled">
   ${
     interview?.identityVerification
       ? `${interview.confidenceScore?.toFixed(1) ?? "N/A"} <span class="score-unit">%</span>`
