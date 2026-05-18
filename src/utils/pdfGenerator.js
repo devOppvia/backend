@@ -493,6 +493,10 @@ return allQuestionUi;
         gap: 6px;
       }
 
+      .perf-tile2 {
+        grid-column: span 2;
+      }
+
       .perf-tile-icon {
         width: 36px;
         height: 36px;
@@ -882,14 +886,14 @@ return allQuestionUi;
             </div>
           </div>
           <div class="score-cell">
-            <div class="score-label">Avg Answer Score</div>
+            <div class="score-label">Avg Ans Score</div>
             <div class="score-value">
               ${interview.avgAnswerScore?.toFixed(1) ?? "N/A"} <span class="score-unit">/ 100</span>
             </div>
           </div>
           <div class="score-cell">
             <div class="score-label">Confidence Score</div>
-            <div class="score-value">${interview?.identityVerification ? (interview.confidenceScore?.toFixed(1) ?? "N/A") : "Disabled"}<span class="score-unit">%</span></div>
+            <div class="score-value">${interview?.identityVerification ? (interview.confidenceScore?.toFixed(1) ?? "N/A") : "Disabled"} ${interview?.identityVerification && <span class="score-unit">%</span>}</div>
           </div>
         </div>
       </div>
@@ -917,30 +921,8 @@ return allQuestionUi;
           <div class="perf-tile-label">Total Questions</div>
           <div class="perf-tile-value">${interview.totalQuestions ?? "N/A"}</div>
         </div>
-        <div class="perf-tile">
-          <div class="perf-tile-icon">
-            <svg
-              width="18"
-              height="18"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="#0A3031"
-              stroke-width="2"
-            >
-              <polygon
-                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
-              />
-            </svg>
-          </div>
-          <div class="perf-tile-label">STAR Used</div>
-          <div class="perf-tile-value">
-            ${interview.starUsed ?? 0} /
-            <span style="font-size: 14px; color: #7a9a9b; font-weight: 400"
-              >${interview.totalQuestions ?? 0}</span
-            >
-          </div>
-        </div>
-        <div class="perf-tile">
+       
+        <div class="perf-tile perf-tile2">
           <div class="perf-tile-icon">
             <svg
               width="18"
@@ -964,14 +946,14 @@ return allQuestionUi;
 
       <!-- CONFIDENCE & BEHAVIOR -->
     ${
-      interview?.identityVerification && (
-        `<div class="section-title">Confidence & Behavior</div>`
-      )
+      interview?.identityVerification
+        ? `<div class="section-title">Confidence & Behavior</div>`
+        : ""
     }
 
 ${
-  interview?.identityVerification &&
-  `<div class="conf-row">
+  interview?.identityVerification
+    ? `<div class="conf-row">
       <div class="card" style="margin-bottom: 0">
         <div
           style="
@@ -1056,6 +1038,7 @@ ${
         </div>
       </div>
     </div>`
+    : ""
 }
 
       <!-- AI PERFORMANCE INSIGHTS -->
