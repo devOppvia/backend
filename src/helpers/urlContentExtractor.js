@@ -69,7 +69,7 @@ async function fetchWithPuppeteer(url) {
        ],
      });
     
-      try {
+  
 
     const page = await browser.newPage();
     await page.setUserAgent("Mozilla/5.0 (compatible; Oppvia-Bot/1.0)");
@@ -116,6 +116,7 @@ async function fetchWithPuppeteer(url) {
     if (browser) await browser.close();
   }
 }
+
 
 // Minimal HTML → plain text parser (regex-based, no external deps)
 function parseHtml(html) {
