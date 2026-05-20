@@ -6,5 +6,6 @@ const isAdmin = require("../../middlewares/isAdminMiddleware")
 
 router.post("/get-dashboard-details",authMiddleware,isAdmin, adminControllers.getDashboardDetails)
 router.post("/get-incomplete-profile-interns",authMiddleware,isAdmin, adminControllers.getIncompleteProfileInterns)
+router.post("/get-pending-profile-companies",authMiddleware,isAdmin, adminControllers.getPendingProfileCompletionCompanies)
 
 module.exports = router

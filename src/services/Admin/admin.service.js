@@ -46,6 +46,52 @@ exports.getIncompleteProfileInterns = async ({ page = 1, limit = 10 }) => {
   };
 };
 
+exports.getPendingProfileCompletionCompanies = async ({ page = 1, limit = 10 }) => {
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    prisma.company.findMany({
+      where: {
+        isDelete: false,
+        isProfileCompleted: false,
+      },
+      select: {
+        id: true,
+        companyName: true,
+        email: true,
+        hrAndRecruiterName: true,
+        designation: true,
+        countryCode: true,
+        phoneNumber: true,
+        logo: true,
+        companyStatus: true,
+        isEmailVerified: true,
+        isMobileVerified: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.company.count({
+      where: {
+        isDelete: false,
+        isProfileCompleted: false,
+      },
+    }),
+  ]);
+
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 exports.getDashboardDetails = async (data) => {
   console.log("this is")
   let [allCompany, pendingCompany, approvedCompany, rejectedCompany] =

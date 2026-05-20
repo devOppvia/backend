@@ -13,6 +13,18 @@ exports.getIncompleteProfileInterns = async (req, res) => {
     }
 }
 
+exports.getPendingProfileCompletionCompanies = async (req, res) => {
+    try {
+        const page = parseInt(req.body.page) || 1
+        const limit = parseInt(req.body.limit) || 10
+        const result = await adminServices.getPendingProfileCompletionCompanies({ page, limit })
+        return successResponse(res, result.data, "Pending profile completion companies fetched successfully", result.pagination)
+    } catch (error) {
+        console.error(error)
+        return errorResponse(res, "Internal server error", 500)
+    }
+}
+
 exports.getDashboardDetails = async (req, res)=>{
     try {
         let { } = req.body || {}
