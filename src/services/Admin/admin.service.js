@@ -14,7 +14,7 @@ exports.getIncompleteProfileInterns = async ({ page = 1, limit = 10 }) => {
   const [data, total] = await Promise.all([
     prisma.internOtps.findMany({
       where: {
-        isVerifies: true,
+        // isVerifies: true,
         mobileNumber: { notIn: registeredNumbers },
       },
       select: {
@@ -29,7 +29,7 @@ exports.getIncompleteProfileInterns = async ({ page = 1, limit = 10 }) => {
     }),
     prisma.internOtps.count({
       where: {
-        isVerifies: true,
+        // isVerifies: true,
         mobileNumber: { notIn: registeredNumbers },
       },
     }),
