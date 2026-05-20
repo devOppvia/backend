@@ -1,6 +1,51 @@
 const { all } = require("axios");
 const prisma = require("../../config/database");
 
+exports.getIncompleteProfileInterns = async ({ page = 1, limit = 10 }) => {
+  const skip = (page - 1) * limit;
+
+  const existingMobiles = await prisma.interns.findMany({
+    where: { isDelete: false },
+    select: { mobileNumber: true },
+  });
+
+  const registeredNumbers = existingMobiles.map((i) => i.mobileNumber);
+
+  const [data, total] = await Promise.all([
+    prisma.internOtps.findMany({
+      where: {
+        isVerifies: true,
+        mobileNumber: { notIn: registeredNumbers },
+      },
+      select: {
+        id: true,
+        mobileNumber: true,
+        countryCode: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.internOtps.count({
+      where: {
+        isVerifies: true,
+        mobileNumber: { notIn: registeredNumbers },
+      },
+    }),
+  ]);
+
+  return {
+    data,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 exports.getDashboardDetails = async (data) => {
   console.log("this is")
   let [allCompany, pendingCompany, approvedCompany, rejectedCompany] =
