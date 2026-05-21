@@ -13,6 +13,9 @@ router.post("/extract-url", authMiddleware, controller.extractUrl);
 // ─── Interview Lifecycle ──────────────────────────────────────────────────────
 router.post("/create", authMiddleware, controller.createInterview);
 router.post("/:id/start", authMiddleware, controller.startInterview);
+router.post("/:id/lock/claim", authMiddleware, controller.claimInterviewLock);
+router.post("/:id/lock/heartbeat", authMiddleware, controller.heartbeatInterviewLock);
+router.post("/:id/lock/release", authMiddleware, controller.releaseInterviewLock);
 router.get("/:id/next-question", authMiddleware, controller.getNextQuestion);
 
 // TTS — streams audio/mpeg directly; also writes to disk cache

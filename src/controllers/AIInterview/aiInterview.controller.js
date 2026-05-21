@@ -35,6 +35,71 @@ const getTopSkill = (questions) => {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 };
 
+const INTERVIEW_LOCK_TTL_MS = 15000;
+const activeInterviewLocks = new Map();
+
+const getInterviewClientId = (req) =>
+  req.get("X-Interview-Client-Id") ||
+  req.body?.clientId ||
+  req.query?.clientId ||
+  "";
+
+const isFreshInterviewLock = (lock) =>
+  lock?.clientId && Date.now() - lock.heartbeatAt < INTERVIEW_LOCK_TTL_MS;
+
+const claimInterviewLock = ({ interviewId, internId, clientId }) => {
+  const existingLock = activeInterviewLocks.get(interviewId);
+
+  if (
+    isFreshInterviewLock(existingLock) &&
+    existingLock.clientId !== clientId
+  ) {
+    return false;
+  }
+
+  activeInterviewLocks.set(interviewId, {
+    internId,
+    clientId,
+    heartbeatAt: Date.now(),
+  });
+  return true;
+};
+
+const ensureInterviewLock = (req, res, interviewId, internId) => {
+  const clientId = getInterviewClientId(req);
+  const existingLock = activeInterviewLocks.get(interviewId);
+
+  if (!clientId) {
+    if (isFreshInterviewLock(existingLock)) {
+      return errorResponse(
+        res,
+        "This interview is already active in another tab or device.",
+        409,
+      );
+    }
+    return true;
+  }
+
+  const claimed = claimInterviewLock({ interviewId, internId, clientId });
+  if (!claimed) {
+    return errorResponse(
+      res,
+      "This interview is already active in another tab or device.",
+      409,
+    );
+  }
+
+  return true;
+};
+
+const releaseInterviewLock = (interviewId, clientId) => {
+  const existingLock = activeInterviewLocks.get(interviewId);
+  if (!existingLock) return;
+  if (!clientId || existingLock.clientId === clientId) {
+    activeInterviewLocks.delete(interviewId);
+  }
+};
+
 // ─── POST /ai-interview/extract-url ──────────────────────────────────────────
 exports.extractUrl = async (req, res) => {
   try {
@@ -158,6 +223,81 @@ exports.startInterview = async (req, res) => {
   }
 };
 
+exports.claimInterviewLock = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const { id } = req.params;
+    const clientId = getInterviewClientId(req);
+
+    if (!clientId) return errorResponse(res, "Interview client ID is required", 400);
+
+    const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
+    if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (interview.status !== "IN_PROGRESS")
+      return errorResponse(res, "Interview not in progress", 400);
+
+    const claimed = claimInterviewLock({ interviewId: id, internId, clientId });
+    if (!claimed) {
+      return errorResponse(
+        res,
+        "This interview is already active in another tab or device.",
+        409,
+      );
+    }
+
+    return successResponse(res, { activeClientId: clientId }, "Interview lock claimed", 200);
+  } catch (error) {
+    console.error("Claim interview lock error:", error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.heartbeatInterviewLock = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const { id } = req.params;
+    const clientId = getInterviewClientId(req);
+
+    if (!clientId) return errorResponse(res, "Interview client ID is required", 400);
+
+    const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
+    if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (interview.status !== "IN_PROGRESS")
+      return errorResponse(res, "Interview not in progress", 400);
+
+    const claimed = claimInterviewLock({ interviewId: id, internId, clientId });
+    if (!claimed) {
+      return errorResponse(
+        res,
+        "This interview is already active in another tab or device.",
+        409,
+      );
+    }
+
+    return successResponse(res, {}, "Interview lock refreshed", 200);
+  } catch (error) {
+    console.error("Heartbeat interview lock error:", error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.releaseInterviewLock = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const { id } = req.params;
+    const clientId = getInterviewClientId(req);
+
+    const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
+    if (!interview) return errorResponse(res, "Interview not found", 404);
+
+    releaseInterviewLock(id, clientId);
+    return successResponse(res, {}, "Interview lock released", 200);
+  } catch (error) {
+    console.error("Release interview lock error:", error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
 // ─── GET /ai-interview/:id/next-question ──────────────────────────────────────
 exports.getNextQuestion = async (req, res) => {
   try {
@@ -168,6 +308,7 @@ exports.getNextQuestion = async (req, res) => {
     if (!interview) return errorResponse(res, "Interview not found", 404);
     if (interview.status !== "IN_PROGRESS")
       return errorResponse(res, "Interview not in progress", 400);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
 
     const existingQuestions = await prisma.aIInterviewQuestion.findMany({
       where: { aiInterviewId: id },
@@ -264,6 +405,7 @@ exports.textToSpeech = async (req, res) => {
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
 
     await elevenLabsService.textToSpeech({
       text,
@@ -291,6 +433,7 @@ exports.replayAudio = async (req, res) => {
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
 
     const served = elevenLabsService.serveCachedAudio({ interviewId: id, questionNumber, res });
     if (!served) return errorResponse(res, "Audio not cached yet", 404);
@@ -313,6 +456,7 @@ exports.speechToText = async (req, res) => {
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
 
     const result = await elevenLabsService.speechToText({
       audioBuffer: req.file.buffer,
@@ -350,6 +494,7 @@ exports.submitAnswer = async (req, res) => {
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
     console.log("log 3 : check function");
 
     const question = await prisma.aIInterviewQuestion.findFirst({
@@ -480,6 +625,7 @@ exports.completeInterview = async (req, res) => {
 
     const interview = await aiInterviewService.getInterviewByIdAndIntern(id, internId);
     if (!interview) return errorResponse(res, "Interview not found", 404);
+    if (ensureInterviewLock(req, res, id, internId) !== true) return;
 
 
 
@@ -492,6 +638,7 @@ exports.completeInterview = async (req, res) => {
           completedAt : new Date(),
         },
       });
+      releaseInterviewLock(id, getInterviewClientId(req));
 
         return successResponse(
           res,
@@ -602,6 +749,7 @@ exports.completeInterview = async (req, res) => {
 
     // Clean up cached TTS audio files for this interview
     elevenLabsService.clearInterviewAudioCache(id);
+    releaseInterviewLock(id, getInterviewClientId(req));
 
     return successResponse(
       res,
