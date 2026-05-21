@@ -10,6 +10,7 @@ const app = express();
 app.use(
   cors({
     origin: [
+      "https://testoppvia.vercel.app",
        "http://192.168.1.30:5173",
       "http://192.168.1.6:3001",
       "http://192.168.1.6:5173",
