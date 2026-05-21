@@ -174,6 +174,24 @@ exports.getNextQuestion = async (req, res) => {
       orderBy: { questionNumber: "asc" },
     });
 
+    const unansweredQuestion = existingQuestions.find((q) => !q.answeredAt);
+    if (unansweredQuestion) {
+      return successResponse(
+        res,
+        {
+          isComplete: false,
+          questionId: unansweredQuestion.id,
+          questionNumber: unansweredQuestion.questionNumber,
+          questionText: unansweredQuestion.questionText,
+          questionType: unansweredQuestion.questionType,
+          totalQuestions: interview.totalQuestions,
+          skillTested: unansweredQuestion.skillTested,
+        },
+        "Question resumed",
+        200,
+      );
+    }
+
     const questionNumber = existingQuestions.length + 1;
 
     if (questionNumber > interview.totalQuestions) {
