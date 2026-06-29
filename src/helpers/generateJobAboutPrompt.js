@@ -26,6 +26,7 @@ function generateJobPrompt(jobData) {
     numberOfInterns = "",
     stipend = "",
     additionalBenefits = [],
+    CompanyName
   } = jobData;
 
   const skills =
@@ -34,25 +35,28 @@ function generateJobPrompt(jobData) {
     additionalBenefits.length > 0 ? additionalBenefits.join(", ") : "";
 
   return `Create a professional internship job description for:
+
+    Company Name : ${CompanyName}
   
     Internship Position: ${positionTitle}
     Category: ${category}${subCategory ? ` - ${subCategory}` : ""}
     Required Skills: ${skills}
     Duration: ${duration}
     Working Hours: ${workingHours}
-    Internship Type: ${internshipType}${location ? ` in ${location}` : ""}
+    Internship Type: ${internshipType}
+    Location: ${CompanyName},  ${location ? ` in ${location}` : ""}
     Number of Interns: ${numberOfInterns}
     Stipend: ${stipend}
     ${benefits ? `Additional Benefits: ${benefits}` : ""}
   
-    Write 150-200 words with:
+    Write 140-180 words with:
     - Overview of the internship and company culture
     - Key responsibilities and expected contributions
     - Learning opportunities, mentorship, and skill development
     - Why this internship will be valuable for career growth
     - Encourage motivated students or fresh graduates to apply
 
-    note not add markdown like ** and other, length of content is only 800 characters including spaces
+    note not add markdown like ** and other, length of content is only 180 characters including spaces
     `;
 }
 

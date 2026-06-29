@@ -46,9 +46,13 @@ exports.submitJobOpening = async (req, res) => {
     if (!companyId) {
       return errorResponse(res, "Company Id is required", 400);
     }
-    if(!city || !state) {
+        console.log("Working hours : " , workingHours)
+if(jobType !== "REMOTE") {
+ if(!city || !state) {
       return errorResponse(res, "Location is required", 400);
     }
+}
+   
     if (!jobTitle) {
       return errorResponse(res, "Job title is required", 400);
     }
@@ -702,9 +706,13 @@ exports.generateJobAbout = async (req, res) => {
       internsRequired,
       stipend,
         additionalBenefits,
+        companyId
     } = req.body || {};
     if (!title) {
       return errorResponse(res, "Postion title is required", 400);
+    }
+     if (!companyId) {
+      return errorResponse(res, "CompanyId is required", 400);
     }
     if (!jobCategoryId) {
       return errorResponse(res, "Job Category id is required", 400);
@@ -730,9 +738,9 @@ exports.generateJobAbout = async (req, res) => {
     if (!workType) {
       return errorResponse(res, "Internship type is required");
     }
-    if (!location) {
-      return errorResponse(res, "Location is required", 400);
-    }
+    // if (!location) {
+    //   return errorResponse(res, "Location is required", 400);
+    // }
     if (!internsRequired) {
       return errorResponse(res, "Number of interns required", 400);
     }
@@ -742,6 +750,15 @@ exports.generateJobAbout = async (req, res) => {
     //     return errorResponse(res, "Invalid stipend type");
     //   }
     // }
+
+    const CompanyDetails = await prisma.company.findUnique({
+      where : {
+        id : companyId
+      }
+    })
+
+    console.log("company id : " , CompanyDetails)
+
     if (stipend.type === "Paid") {
       if (!stipend.minAmount || !stipend.maxAmount) {
         return errorResponse(res, "Min and Max stipend is required");
@@ -774,8 +791,14 @@ exports.generateJobAbout = async (req, res) => {
       numberOfInterns: internsRequired,
       stipend: stipend,
       additionalBenefits: additionalBenefits,
+      CompanyName : CompanyDetails?.companyName
     };
+
+    console.log("body : " , body)
     let prompt = generateJobPrompt(body);
+
+    console.log("prompts : "  , prompt)
+
     
     // let description = await jobManagementServices.generateJobAbout(prompt);
     let description = await generateJobAboutAI(prompt);

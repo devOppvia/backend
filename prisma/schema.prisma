@@ -1,4 +1,4 @@
-  generator client {
+generator client {
   provider = "prisma-client-js"
 }
 
@@ -52,9 +52,7 @@ enum WorkMode {
   PART_TIME
   CONTRACT
   ANY
-} 
-
-
+}
 
 enum JobStatus {
   REVIEW
@@ -66,82 +64,78 @@ enum JobStatus {
 }
 
 model Interns {
-  id                      String                @id @unique @default(uuid())
-  fullName                String
-  email                   String                @unique
-  countryCode             String
-  mobileNumber            String                @unique
-  fcmToken                String?
-  profilePicture          String?
-  DOB                     String
-  gender                  Gender                @default(MALE)
-  highestQualification    String
-  collageOrUniversityName String
-  degreeOrCourse          String
-  yosOrGraduationYear     String
+  id                         String                @id @unique @default(uuid())
+  fullName                   String
+  email                      String                @unique
+  countryCode                String
+  mobileNumber               String                @unique
+  fcmToken                   String?
+  profilePicture             String?
+  DOB                        String
+  gender                     Gender                @default(MALE)
+  highestQualification       String
+  collageOrUniversityName    String
+  degreeOrCourse             String
+  yosOrGraduationYear        String
   // cgpaOrPercentage        String
-  resume                  String
-  industry                Json
-  department              Json
-  skills                  Skills[]
-  personalDetails         String?
-  projectLink             Json?
-  internshipType          InternshipType
-  reasonOffboard          String?
-  mobileOtp               String?
-  isMobileVerified        Boolean               @default(false)
-  emailOtp                String?
-  isEmailVerified         Boolean               @default(false)
-  emailOtpExpiry          DateTime?
-  mobileOtpExpiry         DateTime?
-  isResumeActive          Boolean               @default(true)
-  isResumeDeleted         Boolean               @default(false)
-  isProfileComplate       Boolean               @default(true)
-  isDelete                Boolean               @default(false)
-  isOpenToWork            Boolean               @default(true)
-  otpAttempts             Int                   @default(0)
-  emailOtpAttempts        Int                   @default(0)
-  otpVerifyAttempts       Int                   @default(0)
-  otpVerifyBlockedUntil   DateTime?
-  emailOtpVerifyAttempts  Int                   @default(0)
+  resume                     String
+  industry                   Json
+  department                 Json
+  skills                     Skills[]
+  personalDetails            String?
+  projectLink                Json?
+  internshipType             InternshipType
+  reasonOffboard             String?
+  mobileOtp                  String?
+  isMobileVerified           Boolean               @default(false)
+  emailOtp                   String?
+  isEmailVerified            Boolean               @default(false)
+  emailOtpExpiry             DateTime?
+  mobileOtpExpiry            DateTime?
+  isResumeActive             Boolean               @default(true)
+  isResumeDeleted            Boolean               @default(false)
+  isProfileComplate          Boolean               @default(true)
+  isDelete                   Boolean               @default(false)
+  isOpenToWork               Boolean               @default(true)
+  otpAttempts                Int                   @default(0)
+  emailOtpAttempts           Int                   @default(0)
+  otpVerifyAttempts          Int                   @default(0)
+  otpVerifyBlockedUntil      DateTime?
+  emailOtpVerifyAttempts     Int                   @default(0)
   emailOtpVerifyBlockedUntil DateTime?
-  applicationType         ApplicationType       @default(INTERNSHIP)
-  experience              String?
-  internStatus            InternStatus          @default(PENDING)
-  candidate               CandidateManagement[]
-  downloadedResumes       DownloadedResumes[]
-  internNotification      InternNotification[]
-  interview               Interview[]
-  linkedin                 String?             
-  github                  String?
-  portfolio               String?
-  employmentType          WorkMode              @default(ANY)
+  applicationType            ApplicationType       @default(INTERNSHIP)
+  experience                 String?
+  internStatus               InternStatus          @default(PENDING)
+  candidate                  CandidateManagement[]
+  downloadedResumes          DownloadedResumes[]
+  internNotification         InternNotification[]
+  interview                  Interview[]
+  linkedin                   String?
+  github                     String?
+  portfolio                  String?
+  employmentType             WorkMode              @default(ANY)
 
-  preferredLocation       City[]   @relation("PreferredLocations")
-  preferredStates          State[]   @relation("PreferredState")
-  preferredAll          Boolean   @default(false)
-  
+  preferredLocation City[]  @relation("PreferredLocations")
+  preferredStates   State[] @relation("PreferredState")
+  preferredAll      Boolean @default(false)
 
-cityId    String
-city      City @relation("CurrentCity", fields: [cityId], references: [id])
+  cityId String
+  city   City   @relation("CurrentCity", fields: [cityId], references: [id])
 
-stateId   String
-state     State @relation("CurrentState",fields: [stateId], references: [id])
+  stateId String
+  state   State  @relation("CurrentState", fields: [stateId], references: [id])
 
-countryId String
-country   Country @relation(fields: [countryId], references: [id])
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id])
 
-// ============= interview ===
-aiInterviews         AIInterview[]
-internSubscriptions  InternSubscription[]
-
+  // ============= interview ===
+  aiInterviews        AIInterview[]
+  internSubscriptions InternSubscription[]
 
   // jobCategory             JobCategory?          @relation("InternJobCategories")
   // jobSubCategory          JobSubCategory?       @relation("InternJobSubCategories")
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
-
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   aiCalls AICall[]
 
@@ -186,15 +180,18 @@ enum CompanyStatus {
 }
 
 model Company {
-  id                 String    @id @unique @default(uuid())
-  companyName        String
-  email              String    @unique
-  designation        String
-  hrAndRecruiterName String
-  countryCode        String
-  phoneNumber        String    @unique
-  password           String
-  fcmToken           String?
+  id           String  @id @unique @default(uuid())
+  companyName  String
+  email        String  @unique
+  documentType String?
+  document     String?
+
+  designation           String
+  hrAndRecruiterName    String
+  countryCode           String
+  phoneNumber           String    @unique
+  password              String
+  fcmToken              String?
   emailOtp              String?
   isEmailVerified       Boolean   @default(false)
   emailOtpExpiry        DateTime?
@@ -205,19 +202,20 @@ model Company {
   mobileOtpExpiry       DateTime?
   mobileOtpAttempts     Int       @default(0)
   mobileOtpBlockedUntil DateTime?
-  logo               String?
-  smallLogo          String?
-  industryType       String?
-  companySize        String?
-  companyIntro       String?
-  foundedYear        String?
-  panOrGst           String?
+  logo                  String?
+  smallLogo             String?
+  industryType          String?
+  companySize           String?
+  companyIntro          String?
+  foundedYear           String?
+  panOrGst              String?
 
   country        String?
   state          String?
   city           String?
   zipCode        String?
   address        String?
+  officeNumber   String?
   branchLocation Json?
   aiCallIntro    String?
 
@@ -244,11 +242,8 @@ model Company {
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
 
-
-
-    aiCallQuestions AICallQuestion[]
+  aiCallQuestions AICallQuestion[]
   aiCalls         AICall[]
-
 
   @@map(name: "companies")
 }
@@ -289,8 +284,6 @@ model CompanyUpdateRequests {
 
   @@map(name: "company_update_requests")
 }
-
-
 
 model JobCategory {
   id               String           @id @unique @default(uuid())
@@ -341,7 +334,7 @@ model Skills {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  intern           Interns[]
+  intern Interns[]
 
   @@index([isDelete, id])
   @@index([id])
@@ -358,54 +351,51 @@ enum StipendValue {
 }
 
 model Job {
-  id                 String                @id @unique @default(uuid())
-  companyId          String
-  jobTitle           String
-  jobCategoryId      String
-  jobSubCategoryId   String
-  internshipDuration String
-  workingHours       String
-  score              Int                   @default(0)
-  skills             Json
-  aboutJob           String 
-  otherRequirements  String
-  numberOfOpenings   Int
-  stipend            StipendValue          @default(NO)
-  minStipend         Int?
-  maxStipend         Int?
-  additionalBenefits Json
-  rejectReason       String?
-  jobActiveDate      DateTime?
-  jobExpireDate      DateTime?
-  jobDaysActive      Int?
-  experience         String?
-  resumeAccessCredits  Int?                @default(0)
-  appliedCandidates  Int                   @default(0)
-  subscriptionId     String?
-  applicationType    ApplicationType       @default(INTERNSHIP)
-  jobCategory        JobCategory           @relation(fields: [jobCategoryId], references: [id])
-  jobSubCategory     JobSubCategory        @relation(fields: [jobSubCategoryId], references: [id])
-  candidate          CandidateManagement[]
-  interview          Interview[]
-  subscription       Subscription?         @relation(fields: [subscriptionId], references: [id])
-  company            Company               @relation(fields: [companyId], references: [id])
-  jobType            JobType               @default(OFFICE)
-  jobStatus          JobStatus             @default(REVIEW)
-  isDelete           Boolean               @default(false)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
- 
-  states             State[]   @relation("jobState")
-  cities             City[]    @relation("jobCity")
-  employmentType          WorkMode              @default(ANY)
+  id                  String                @id @unique @default(uuid())
+  companyId           String
+  jobTitle            String
+  jobCategoryId       String
+  jobSubCategoryId    String
+  internshipDuration  String
+  workingHours        String
+  score               Int                   @default(0)
+  skills              Json
+  aboutJob            String
+  otherRequirements   String
+  numberOfOpenings    Int
+  stipend             StipendValue          @default(NO)
+  minStipend          Int?
+  maxStipend          Int?
+  additionalBenefits  Json
+  rejectReason        String?
+  jobActiveDate       DateTime?
+  jobExpireDate       DateTime?
+  jobDaysActive       Int?
+  experience          String?
+  resumeAccessCredits Int?                  @default(0)
+  appliedCandidates   Int                   @default(0)
+  subscriptionId      String?
+  applicationType     ApplicationType       @default(INTERNSHIP)
+  jobCategory         JobCategory           @relation(fields: [jobCategoryId], references: [id])
+  jobSubCategory      JobSubCategory        @relation(fields: [jobSubCategoryId], references: [id])
+  candidate           CandidateManagement[]
+  interview           Interview[]
+  subscription        Subscription?         @relation(fields: [subscriptionId], references: [id])
+  company             Company               @relation(fields: [companyId], references: [id])
+  jobType             JobType               @default(OFFICE)
+  jobStatus           JobStatus             @default(REVIEW)
+  isDelete            Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
+  states         State[]  @relation("jobState")
+  cities         City[]   @relation("jobCity")
+  employmentType WorkMode @default(ANY)
 
-  callEnable         Boolean               @default(false)
-  callConditionScore Int                   @default(0)
-  aiCallQuestions AICallQuestion[]
-  aiCalls         AICall[]
-
-
+  callEnable         Boolean          @default(false)
+  callConditionScore Int              @default(0)
+  aiCallQuestions    AICallQuestion[]
+  aiCalls            AICall[]
 
   @@index([companyId, jobStatus, isDelete])
   @@index([jobStatus, isDelete])
@@ -469,13 +459,13 @@ model CandidateManagement {
   company         Company         @relation(fields: [companyId], references: [id])
   isScored        Boolean         @default(false)
 
-  score           Int             @default(0)
-  scoredReason    String?
-  interview       Interview[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  score        Int         @default(0)
+  scoredReason String?
+  interview    Interview[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-    aiCalls AICall[]
+  aiCalls AICall[]
 
   @@index([internId, jobId, companyId, isDelete])
   @@index([internId, jobId, companyId])
@@ -588,11 +578,11 @@ model DownloadedResumes {
 }
 
 model Country {
-  id     String  @id @default(cuid())
-  name   String
-  iso2   String  @unique
-  states State[]
-  cities City[]
+  id      String    @id @default(cuid())
+  name    String
+  iso2    String    @unique
+  states  State[]
+  cities  City[]
   interns Interns[]
 
   @@map(name: "countries")
@@ -606,10 +596,9 @@ model State {
   country   Country @relation(fields: [countryId], references: [iso2], onDelete: Cascade)
   cities    City[]
 
-
-  internCurrentState  Interns[] @relation("CurrentState")
-  InternPreferredState  Interns[] @relation("PreferredState")
-  jobs      Job[] @relation("jobState")
+  internCurrentState   Interns[] @relation("CurrentState")
+  InternPreferredState Interns[] @relation("PreferredState")
+  jobs                 Job[]     @relation("jobState")
 
   @@map(name: "states")
 }
@@ -621,10 +610,10 @@ model City {
   countryId String
   state     State   @relation(fields: [stateId], references: [iso2], onDelete: Cascade)
   country   Country @relation(fields: [countryId], references: [iso2], onDelete: Cascade)
-  
+
   internsCurrentCity   Interns[] @relation("CurrentCity")
   internsPreferredCity Interns[] @relation("PreferredLocations")
-  jobs      Job[]   @relation("jobCity")
+  jobs                 Job[]     @relation("jobCity")
 
   @@map(name: "cities")
 }
@@ -716,16 +705,16 @@ model ContactUs {
 }
 
 model InternOtps {
-  id                      String    @id @unique @default(uuid())
-  mobileNumber            String    @unique
-  countryCode             String
-  otp                     String
-  otpExpiry               DateTime
-  isVerifies              Boolean   @default(false)
-  otpVerifyAttempts       Int       @default(0)
-  otpVerifyBlockedUntil   DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  id                    String    @id @unique @default(uuid())
+  mobileNumber          String    @unique
+  countryCode           String
+  otp                   String
+  otpExpiry             DateTime
+  isVerifies            Boolean   @default(false)
+  otpVerifyAttempts     Int       @default(0)
+  otpVerifyBlockedUntil DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@map(name: "intern_otps")
 }
@@ -758,7 +747,6 @@ model Interview {
 
   @@map(name: "interview")
 }
-
 
 // ==================== ai interview =========================
 
@@ -800,17 +788,14 @@ enum ExpressionEmotion {
   CONFUSED
 }
 
-
-
-
 model InternSubscriptionPlan {
   id               String   @id @unique @default(uuid())
   planName         String
   description      String
   price            Int
   discountedPrice  Int
-  interviewCredits Int      // how many AI interviews this plan gives
-  duration         Int      // plan validity in days
+  interviewCredits Int // how many AI interviews this plan gives
+  duration         Int // plan validity in days
   features         Json
   isPopular        Boolean  @default(false)
   isDelete         Boolean  @default(false)
@@ -823,20 +808,20 @@ model InternSubscriptionPlan {
 }
 
 model InternSubscription {
-  id                       String   @id @unique @default(uuid())
-  internId                 String
-  planId                   String
-  interviewCreditsTotal    Int
+  id                        String   @id @unique @default(uuid())
+  internId                  String
+  planId                    String
+  interviewCreditsTotal     Int
   interviewCreditsRemaining Int
-  subscriptionStart        DateTime @default(now())
-  subscriptionEnd          DateTime
-  isActive                 Boolean  @default(true)
-  amountPaid               Int
-  razorpay_order_id        String?
-  razorpay_payment_id      String?
-  razorpay_signature       String?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  subscriptionStart         DateTime @default(now())
+  subscriptionEnd           DateTime
+  isActive                  Boolean  @default(true)
+  amountPaid                Int
+  razorpay_order_id         String?
+  razorpay_payment_id       String?
+  razorpay_signature        String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   intern Interns                @relation(fields: [internId], references: [id])
   plan   InternSubscriptionPlan @relation(fields: [planId], references: [id])
@@ -845,46 +830,45 @@ model InternSubscription {
   @@map(name: "intern_subscriptions")
 }
 
-
 model AIInterview {
-  id                    String                   @id @unique @default(uuid())
+  id                    String                  @id @unique @default(uuid())
   internId              String
   type                  AIInterviewType
-  interviewerPreference AIInterviewerPreference  @default(MALE)
-  interviewCategory     AIInterviewCategory      @default(MIXED)
-  identityVerification  Boolean                  @default(false)
-  duration              Int                      // planned duration in mins
-  jobDescription        String?                  // only for COMPANY type
-  companyWebsite        String?                  // only for COMPANY type
+  interviewerPreference AIInterviewerPreference @default(MALE)
+  interviewCategory     AIInterviewCategory     @default(MIXED)
+  identityVerification  Boolean                 @default(false)
+  duration              Int // planned duration in mins
+  jobDescription        String? // only for COMPANY type
+  companyWebsite        String? // only for COMPANY type
   companyWebsiteText    String?
   additionalContext     String?
-  resumeSnapshot        String                   // extracted resume text at session start
-  status                AIInterviewStatus        @default(SETUP)
+  resumeSnapshot        String // extracted resume text at session start
+  status                AIInterviewStatus       @default(SETUP)
 
   // X AI System Configuration
-  voiceUsed             String                   @default("eve")  // eve or rex
-  vadThreshold          Float                    @default(0.5)
-  silenceDuration       Int                      @default(700) // ms
-  
+  voiceUsed       String @default("eve") // eve or rex
+  vadThreshold    Float  @default(0.5)
+  silenceDuration Int    @default(700) // ms
+
   // Results — populated on COMPLETE
-  totalQuestions        Int?
-  overallScore          Float?                   // 0-100
-  avgAnswerScore        Float?                   // 0-100
-  starUsed              Int?                     // count of STAR-structured answers
-  topSkill              String?
-  durationActual        Int?                     // actual mins taken
-  confidenceScore       Float?                   // avg from expression snapshots
-  dominantEmotion       String?
-  behaviorSummary       Json?                    // { confident%, nervous%, neutral%, confused% }
-  aiInsights            Json?                    // ["insight1", "insight2", "insight3"]
-  reportPdfPath         String?                  // URL to generated PDF
+  totalQuestions  Int?
+  overallScore    Float? // 0-100
+  avgAnswerScore  Float? // 0-100
+  starUsed        Int? // count of STAR-structured answers
+  topSkill        String?
+  durationActual  Int? // actual mins taken
+  confidenceScore Float? // avg from expression snapshots
+  dominantEmotion String?
+  behaviorSummary Json? // { confident%, nervous%, neutral%, confused% }
+  aiInsights      Json? // ["insight1", "insight2", "insight3"]
+  reportPdfPath   String? // URL to generated PDF
 
-  startedAt             DateTime?
-  completedAt           DateTime?
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  intern      Interns                @relation(fields: [internId], references: [id])
+  intern      Interns                 @relation(fields: [internId], references: [id])
   questions   AIInterviewQuestion[]
   expressions AIInterviewExpression[]
 
@@ -893,18 +877,18 @@ model AIInterview {
 }
 
 model AIInterviewQuestion {
-  id             String   @id @unique @default(uuid())
+  id             String    @id @unique @default(uuid())
   aiInterviewId  String
   questionNumber Int
   questionText   String
-  questionType   String?  // BEHAVIORAL, TECHNICAL, SITUATIONAL, CLOSING
+  questionType   String? // BEHAVIORAL, TECHNICAL, SITUATIONAL, CLOSING
   answerText     String?
-  answerScore    Float?   // 0-10
-  starUsed       Boolean  @default(false)
+  answerScore    Float? // 0-10
+  starUsed       Boolean   @default(false)
   skillTested    String?
   aiFeedback     String?
   answeredAt     DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   aiInterview AIInterview @relation(fields: [aiInterviewId], references: [id])
 
@@ -912,13 +896,12 @@ model AIInterviewQuestion {
   @@map(name: "ai_interview_questions")
 }
 
-
 model AIInterviewExpression {
   id              String            @id @unique @default(uuid())
   aiInterviewId   String
-  questionId      String?           // which question was being answered at this moment
+  questionId      String? // which question was being answered at this moment
   emotion         ExpressionEmotion @default(NEUTRAL)
-  confidenceScore Float             // 0-100
+  confidenceScore Float // 0-100
   timestamp       DateTime
   createdAt       DateTime          @default(now())
 
@@ -928,39 +911,38 @@ model AIInterviewExpression {
   @@map(name: "ai_interview_expressions")
 }
 
-
 // ai Call =======================
 
 enum AICallStatus {
-  PENDING                 // waiting for nextCallAt
-  CALLING                 // cron picked it up, actively dialing
-  COMPLETED               // intern answered and finished the interview
-  ALL_ATTEMPTS_EXHAUSTED  // 3 attempts made, none answered/completed
-  FAILED                  // unexpected system error
+  PENDING // waiting for nextCallAt
+  CALLING // cron picked it up, actively dialing
+  COMPLETED // intern answered and finished the interview
+  ALL_ATTEMPTS_EXHAUSTED // 3 attempts made, none answered/completed
+  FAILED // unexpected system error
 }
 
 enum AICallAttemptStatus {
-  IN_PROGRESS         // call is live right now
-  NOT_ANSWERED        // rang out, intern didn't pick up
-  ANSWERED_COMPLETED  // picked up + finished all questions
-  ANSWERED_DROPPED    // picked up but hung up before completing
-  MACHINE_DETECTED    // voicemail/answering machine detected
-  FAILED              // Twilio/technical error
+  IN_PROGRESS // call is live right now
+  NOT_ANSWERED // rang out, intern didn't pick up
+  ANSWERED_COMPLETED // picked up + finished all questions
+  ANSWERED_DROPPED // picked up but hung up before completing
+  MACHINE_DETECTED // voicemail/answering machine detected
+  FAILED // Twilio/technical error
 }
 
 model AICallQuestion {
-  id        String   @id @unique @default(uuid())
+  id        String         @id @unique @default(uuid())
   companyId String
   jobId     String?
   question  String
-  order     Int      @default(0)
-  isActive  Boolean  @default(true)
+  order     Int            @default(0)
+  isActive  Boolean        @default(true)
   audioUrl  String?
-  company   Company  @relation(fields: [companyId], references: [id])
-  job       Job?     @relation(fields: [jobId], references: [id])
+  company   Company        @relation(fields: [companyId], references: [id])
+  job       Job?           @relation(fields: [jobId], references: [id])
   answers   AICallAnswer[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@index([companyId, jobId, isActive])
   @@map(name: "ai_call_questions")
@@ -975,7 +957,7 @@ model AICall {
   status                AICallStatus @default(PENDING)
   attemptNumber         Int          @default(0)
   nextCallAt            DateTime?
-  allAttemptsExhausted  Boolean      @default(false)  // denormalized from status for composite index; always set together with status
+  allAttemptsExhausted  Boolean      @default(false) // denormalized from status for composite index; always set together with status
   triggerScore          Float
   transcript            Json?
   callScore             Float?

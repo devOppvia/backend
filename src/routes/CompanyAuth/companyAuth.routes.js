@@ -99,7 +99,7 @@ router.post(
 
 router.post(
   "/registration-step2",
-  uploads.fields([{ name: "logo" }, { name: "smallLogo" }]),
+  uploads.fields([{ name: "logo" }, { name: "document" }]),
   checkFieldSize,
   handleMulterError,
   companyAuthController.companyRegistrationStep2

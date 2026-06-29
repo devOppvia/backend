@@ -83,7 +83,7 @@ exports.createSkill = async (req, res) => {
 
     let createdCount = 0;
     let skippedCount = 0;
-
+    let skillData = [];
     for (const singleSkill of skillName) {
       const trimmed = singleSkill.trim();
       const normalizedInput = trimmed.replace(/\s+/g, "").toLowerCase();
@@ -101,13 +101,16 @@ exports.createSkill = async (req, res) => {
         (s) => s.skillName.replace(/\s+/g, "").toLowerCase() === normalizedInput
       );
 
+
+     
+
       if (deletedMatch) {
-        await prisma.skills.update({
+       skillData[createdCount] =  await prisma.skills.update({
           where: { id: deletedMatch.id },
           data: { skillName: trimmed, jobCategoryId, jobSubCategoryId, isDelete: false },
         });
       } else {
-        await skillsServices.createSkill(trimmed, jobCategoryId, jobSubCategoryId);
+       skillData[createdCount] = await skillsServices.createSkill(trimmed, jobCategoryId, jobSubCategoryId);
       }
       createdCount++;
     }
@@ -116,7 +119,7 @@ exports.createSkill = async (req, res) => {
       return errorResponse(res, "All selected skills already exist", 400);
     }
 
-    return successResponse(res, {}, "Skills created successfully", 200);
+    return successResponse(res, skillData, "Skills created successfully", 200);
   } catch (error) {
     console.error("ERROR ::", error);
 

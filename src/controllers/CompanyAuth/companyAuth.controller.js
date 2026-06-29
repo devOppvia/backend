@@ -196,29 +196,45 @@ exports.companyRegistrationStep1 = async (req, res) => {
 
 exports.companyRegistrationStep2 = async (req, res) => {
   try {
-    let { id, industryType, companySize, companyIntro, foundedYear, panOrGst , websiteUrl} =
+    let { id, industryType, companySize, companyIntro, foundedYear, panOrGst , websiteUrl , documentType} =
       req.body || {};
-    let { logo, smallLogo } = req.files || {};
+    let { logo, document } = req.files || {};
     if (!id || validator.isEmpty(id.trim())) {
       return errorResponse(res, "Company id is required", 400);
     }
     if (!validator.isUUID(id)) {
       return errorResponse(res, "Invalid company id format", 400);
     }
-    if (!logo) {
+  
+    if (!logo) { 
       return errorResponse(res, "Company logo is required", 400);
     }
-    if (!smallLogo) {
-      return errorResponse(res, "Company small logo is required", 400);
-    }
+   
     const allowedTypes = ["image/jpeg", "image/png"];
+    const allowedDocumentType = ["image/jpeg",
+  "image/png",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+
+  // PDF
+  "application/pdf",
+
+  // Microsoft Office
+  "application/msword", // .doc
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+  "application/vnd.ms-excel", // .xls
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+  "application/vnd.ms-powerpoint", // .ppt
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+]
 
     if (!allowedTypes.includes(logo[0].mimetype)) {
       return errorResponse(res, "Logo must be a JPG or PNG image", 400);
     }
-
-    if (!allowedTypes.includes(smallLogo[0].mimetype)) {
-      return errorResponse(res, "Small logo must be a JPG or PNG image", 400);
+      console.log("document?.[0]?.mimetype) : ",document?.[0]?.mimetype)
+    if (!allowedDocumentType.includes(document?.[0]?.mimetype)) {
+      return errorResponse(res, "Verification Document JPG or PNG image", 400);
     }
     if (!industryType || validator.isEmpty(industryType.trim())) {
       return errorResponse(res, "Industry type is required", 400);
@@ -226,33 +242,52 @@ exports.companyRegistrationStep2 = async (req, res) => {
     if (!companySize || validator.isEmpty(companySize.trim())) {
       return errorResponse(res, "Company size is required", 400);
     }
-    if (!/^\d{1,6}$/.test(companySize)) {
+    const companySizeOptions = [
+      "1-10",
+      "11-25",
+      "26-50",
+      "51-100",
+      "101-250",
+      "251-500",
+      "501-1000",
+      "1001-5000",
+      "5001-10000",
+      "10000+",
+    ];
+    if (!companySizeOptions.includes(companySize)) {
       return errorResponse(
         res,
-        "Company size must be a number between 1 and 999999",
+        "Company size range is invalid",
         400
       );
     }
-    if (!companyIntro || validator.isEmpty(companyIntro.trim())) {
-      return errorResponse(res, "Company introduction is required", 400);
-    }
-    if (companyIntro.length < 50) {
-      return errorResponse(
-        res,
-        "Company introduction must be at least 50 characters long",
-        400
-      );
-    }
+    // if (!companyIntro || validator.isEmpty(companyIntro.trim())) {
+    //   return errorResponse(res, "Company introduction is required", 400);
+    // }
+    // if (companyIntro.length < 50) {
+    //   return errorResponse(
+    //     res,
+    //     "Company introduction must be at least 50 characters long",
+    //     400
+    //   );
+    // }
     if (!foundedYear || validator.isEmpty(foundedYear.trim())) {
       return errorResponse(res, "Founded year is required", 400);
     }
-    if (!/^(19|20)\d{2}$/.test(foundedYear)) {
+    const foundedYearNumber = Number(foundedYear);
+    const currentYear = new Date().getFullYear();
+    if (
+      !/^\d{4}$/.test(foundedYear) ||
+      foundedYearNumber < 1970 ||
+      foundedYearNumber > currentYear
+    ) {
       return errorResponse(
         res,
-        "Founded year must be a valid year (1900–2099)",
+        `Founded year must be between 1970 and ${currentYear}`,
         400
       );
     }
+
     if (!panOrGst || validator.isEmpty(panOrGst.trim())) {
       return errorResponse(res, "PAN or GST number is required", 400);
     }
@@ -267,6 +302,12 @@ exports.companyRegistrationStep2 = async (req, res) => {
     ) {
       return errorResponse(res, "PAN or GST number format is invalid", 400);
     }
+     if (!document) {
+      return errorResponse(res, "Verification Document is required", 400);
+    }
+      if(!documentType) {
+       return errorResponse(res, "Document type is required", 400);
+    }
     let existingCompany = await companyAuthServices.fetchCompanyById(id);
     if (!existingCompany) {
       return errorResponse(res, "Company not found", 400);
@@ -274,13 +315,15 @@ exports.companyRegistrationStep2 = async (req, res) => {
     let response = await companyAuthServices.companyRegistrationStep2(
       id,
       (logo = logo?.[0].filename),
-      (smallLogo = smallLogo?.[0].filename),
+      (smallLogo = logo?.[0].filename),
       industryType,
       companySize,
       companyIntro,
       foundedYear,
       panOrGst,
-      websiteUrl
+      websiteUrl,
+      documentType,
+      (document = document?.[0].filename)
     );
     return successResponse(
       res,
@@ -297,7 +340,7 @@ exports.companyRegistrationStep2 = async (req, res) => {
 
 exports.companyRegistrationStep3 = async (req, res) => {
   try {
-    let { id, country, state, city, zipCode, address, branchLocations } =
+    let { id, country, state, city, zipCode, address, officeNumber, branchLocations } =
       req.body || {};
     if (!id || validator.isEmpty(id.trim())) {
       return errorResponse(res, "Company id is required", 400);
@@ -352,13 +395,20 @@ exports.companyRegistrationStep3 = async (req, res) => {
         400
       );
     }
+    if (!officeNumber || validator.isEmpty(officeNumber.trim())) {
+      return errorResponse(res, "Office number is required", 400);
+    }
+    if (!/^[a-zA-Z0-9\s#.,/-]{1,50}$/.test(officeNumber)) {
+      return errorResponse(res, "Office number is invalid", 400);
+    }
+    let normalizedBranchLocations = [];
     if (branchLocations) {
       if (!Array.isArray(branchLocations)) {
         return errorResponse(res, "Branch location must be an array", 400);
       }
-      if (branchLocations.length === 0) {
-        return errorResponse(res, "Branch location cannot be empty", 400);
-      }
+      normalizedBranchLocations = branchLocations
+        .map((location) => String(location || "").trim())
+        .filter(Boolean);
     }
     let existingCompany = await companyAuthServices.fetchCompanyById(id);
     if (!existingCompany) {
@@ -371,7 +421,8 @@ exports.companyRegistrationStep3 = async (req, res) => {
       city,
       zipCode,
       address,
-      branchLocations
+      officeNumber,
+      normalizedBranchLocations
     );
     return successResponse(
       res,
@@ -409,7 +460,7 @@ exports.companyRegistrationStep4 = async (req, res) => {
       return errorResponse(res, "Invalid LinkedIn URL format", 400);
     }
     if (
-      !/^https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9-_%]+\/?$/.test(
+      !/^https?:\/\/((www|in)\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9-_%]+\/?$/.test(
         linkdinUrl.trim(),
       )
     ) {

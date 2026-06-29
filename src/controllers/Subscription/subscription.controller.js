@@ -37,16 +37,29 @@ exports.createSubscriptionPlan = async (req, res) => {
         400
       );
     }
-    if (!actualPrice) {
+    if (actualPrice === undefined || actualPrice === null || actualPrice === "") {
       return errorResponse(res, "Actual price is required", 400);
     }
-    if (!discountedPrice) {
+    if (
+      discountedPrice === undefined ||
+      discountedPrice === null ||
+      discountedPrice === ""
+    ) {
+      return errorResponse(res, "Discounted price is required", 400);
+    }
+    actualPrice = Number(actualPrice);
+    discountedPrice = Number(discountedPrice);
+
+    if (Number.isNaN(actualPrice) || actualPrice < 0) {
+      return errorResponse(res, "Actual price is required", 400);
+    }
+    if (Number.isNaN(discountedPrice) || discountedPrice < 0) {
       return errorResponse(res, "Discounted price is required", 400);
     }
     if (actualPrice < discountedPrice) {
       return errorResponse(
         res,
-        "Actual price must be greater than discounted price",
+        "Actual price must be greater than or equal to discounted price",
         400
       );
     }
@@ -177,16 +190,29 @@ exports.updateSubscriptionPlan = async (req, res) => {
     if (!packageName) {
       return errorResponse(res, "Package name is required", 400);
     }
-    if (!actualPrice) {
+    if (actualPrice === undefined || actualPrice === null || actualPrice === "") {
       return errorResponse(res, "Actual price is required", 400);
     }
-    if (!discountedPrice) {
+    if (
+      discountedPrice === undefined ||
+      discountedPrice === null ||
+      discountedPrice === ""
+    ) {
+      return errorResponse(res, "Discounted price is required", 400);
+    }
+    actualPrice = Number(actualPrice);
+    discountedPrice = Number(discountedPrice);
+
+    if (Number.isNaN(actualPrice) || actualPrice < 0) {
+      return errorResponse(res, "Actual price is required", 400);
+    }
+    if (Number.isNaN(discountedPrice) || discountedPrice < 0) {
       return errorResponse(res, "Discounted price is required", 400);
     }
     if (actualPrice < discountedPrice) {
       return errorResponse(
         res,
-        "Actual price must be greater than discounted price",
+        "Actual price must be greater than or equal to discounted price",
         400
       );
     }

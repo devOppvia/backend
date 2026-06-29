@@ -103,7 +103,10 @@ exports.companyRegistrationStep2 = async (
   companyIntro,
   foundedYear,
   panOrGst,
-  websiteUrl
+  websiteUrl,
+  documentType,
+  document
+
 ) => {
   let result = await prisma.company.update({
     where: {
@@ -118,6 +121,8 @@ exports.companyRegistrationStep2 = async (
       foundedYear: foundedYear,
       panOrGst: panOrGst,
       websiteUrl: websiteUrl,
+      documentType : documentType,
+  document : document
     },
     select: {
       id: true,
@@ -147,6 +152,7 @@ exports.companyRegistrationStep3 = async (
   city,
   zipCode,
   address,
+  officeNumber,
   branchLocations
 ) => {
 
@@ -160,6 +166,7 @@ exports.companyRegistrationStep3 = async (
       city: city,
       zipCode: zipCode,
       address: address,
+      officeNumber: officeNumber,
       branchLocation: branchLocations,
     },
     select: {
@@ -183,6 +190,7 @@ exports.companyRegistrationStep3 = async (
       city: true,
       zipCode: true,
       address: true,
+      officeNumber: true,
       branchLocation: true,
     },
   } )
@@ -196,6 +204,7 @@ exports.companyRegistrationStep3 = async (
       city: city,
       zipCode: zipCode,
       address: address,
+      officeNumber: officeNumber,
       branchLocation: branchLocations,
     },
     select: {
@@ -219,6 +228,7 @@ exports.companyRegistrationStep3 = async (
       city: true,
       zipCode: true,
       address: true,
+      officeNumber: true,
       branchLocation: true,
     },
   });

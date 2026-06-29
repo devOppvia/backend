@@ -63,8 +63,8 @@ exports.submitJobOpening = async (data) => {
     }
   })
   console.log("current sub ==> " , currentPackage)
-  let jobDaysActive = currentPackage.jobDaysActive
-  let resumeAccessCredits = currentPackage.resumeAccessCredits
+  let jobDaysActive = currentPackage?.jobDaysActive
+  let resumeAccessCredits = currentPackage?.resumeAccessCredits
   
   if(currentPackage){
    
@@ -81,22 +81,22 @@ exports.submitJobOpening = async (data) => {
   }
 
 
-  const getState = await prisma.state.findFirst({
+  const isRemoteJob = jobType === "REMOTE";
+  const getState = !isRemoteJob && state ? await prisma.state.findFirst({
     where : {
       name : state
     }
-  }) 
-  const getCity = await prisma.city.findFirst({
+  }) : null;
+  const getCity = !isRemoteJob && city && getState ? await prisma.city.findFirst({
     where : {
       name : city,
       stateId : getState.iso2
     }
-  }) 
+  }) : null;
 
   console.log("creating job... ==> " , aiCall)
 
-  const job = await prisma.job.create({
-    data: {
+  const jobData = {
       companyId: companyId,
       jobTitle: jobTitle,
       jobCategoryId: jobCategoryId,
@@ -119,22 +119,31 @@ exports.submitJobOpening = async (data) => {
       jobDaysActive : jobDaysActive,
       resumeAccessCredits : resumeAccessCredits,
       experience : applicationType === "JOB" ? experience : null,
-      callEnable : aiCall.enabled,
-      callConditionScore : aiCall.callMode === "SCORE" ? aiCall.minScore : 0,
-      cities: {
-       connect: { id: getCity.id }
-      },
-      states: {
-       connect: { id: getState.id }
-      }
-    },
+      callEnable : aiCall?.enabled,
+      callConditionScore : aiCall?.callMode === "SCORE" ? aiCall.minScore : 0,
+  };
+
+  if (getCity?.id) {
+    jobData.cities = {
+      connect: [{ id: getCity.id }]
+    };
+  }
+
+  if (getState?.id) {
+    jobData.states = {
+      connect: [{ id: getState.id }]
+    };
+  }
+
+  const job = await prisma.job.create({
+    data: jobData,
   });
 
   console.log("job created ========> " , job.id)
 
 
 
-if (aiCall.questions?.length > 0) {
+if (aiCall?.questions?.length > 0) {
  await prisma.job.update({
    where: {
      id: job.id,
