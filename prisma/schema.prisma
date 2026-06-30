@@ -351,42 +351,42 @@ enum StipendValue {
 }
 
 model Job {
-  id                  String                @id @unique @default(uuid())
-  companyId           String
-  jobTitle            String
-  jobCategoryId       String
-  jobSubCategoryId    String
-  internshipDuration  String
-  workingHours        String
-  score               Int                   @default(0)
-  skills              Json
-  aboutJob            String
-  otherRequirements   String
-  numberOfOpenings    Int
-  stipend             StipendValue          @default(NO)
-  minStipend          Int?
-  maxStipend          Int?
-  additionalBenefits  Json
-  rejectReason        String?
-  jobActiveDate       DateTime?
-  jobExpireDate       DateTime?
-  jobDaysActive       Int?
-  experience          String?
-  resumeAccessCredits Int?                  @default(0)
-  appliedCandidates   Int                   @default(0)
-  subscriptionId      String?
-  applicationType     ApplicationType       @default(INTERNSHIP)
-  jobCategory         JobCategory           @relation(fields: [jobCategoryId], references: [id])
-  jobSubCategory      JobSubCategory        @relation(fields: [jobSubCategoryId], references: [id])
-  candidate           CandidateManagement[]
-  interview           Interview[]
-  subscription        Subscription?         @relation(fields: [subscriptionId], references: [id])
-  company             Company               @relation(fields: [companyId], references: [id])
-  jobType             JobType               @default(OFFICE)
-  jobStatus           JobStatus             @default(REVIEW)
-  isDelete            Boolean               @default(false)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  id                   String                @id @unique @default(uuid())
+  companyId            String
+  jobTitle             String
+  jobCategoryId        String
+  jobSubCategoryId     String
+  internshipDuration   String
+  workingHours         String
+  score                Int                   @default(0)
+  skills               Json
+  aboutJob             String
+  otherRequirements    String
+  numberOfOpenings     Int
+  stipend              StipendValue          @default(NO)
+  minStipend           Int?
+  maxStipend           Int?
+  additionalBenefits   Json
+  rejectReason         String?
+  jobActiveDate        DateTime?
+  jobExpireDate        DateTime?  
+  jobDaysActive        Int?
+  experience           String?
+  numberOfApplications Int?                  @default(0)
+  appliedCandidates    Int                   @default(0)
+  subscriptionId       String?
+  applicationType      ApplicationType       @default(INTERNSHIP)
+  jobCategory          JobCategory           @relation(fields: [jobCategoryId], references: [id])
+  jobSubCategory       JobSubCategory        @relation(fields: [jobSubCategoryId], references: [id])
+  candidate            CandidateManagement[]
+  interview            Interview[]
+  subscription         Subscription?         @relation(fields: [subscriptionId], references: [id])
+  company              Company               @relation(fields: [companyId], references: [id])
+  jobType              JobType               @default(OFFICE)
+  jobStatus            JobStatus             @default(REVIEW)
+  isDelete             Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   states         State[]  @relation("jobState")
   cities         City[]   @relation("jobCity")
@@ -430,7 +430,7 @@ model Subscription {
   actualPrice          Int?
   discountedPrice      Int?
   numberOfJobPosting   Int
-  numberOfResumeAccess Int
+  numberOfApplications Int
   jobDaysActive        Int
   expireDaysPackage    Int
   isFree               Boolean @default(false)
@@ -479,15 +479,15 @@ model CandidateManagement {
 }
 
 model CompanySubscription {
-  id                  String   @id @unique @default(uuid())
-  companyId           String
-  subscriptionId      String
-  jobPostingCredits   Int
-  resumeAccessCredits Int
-  subscriptionStart   DateTime @default(now())
-  subscriptionEnd     DateTime
-  jobDaysActive       Int      @default(3)
-  isActive            Boolean  @default(true)
+  id                   String   @id @unique @default(uuid())
+  companyId            String
+  subscriptionId       String
+  jobPostingCredits    Int
+  numberOfApplications Int
+  subscriptionStart    DateTime @default(now())
+  subscriptionEnd      DateTime
+  jobDaysActive        Int      @default(3)
+  isActive             Boolean  @default(true)
 
   company      Company      @relation(fields: [companyId], references: [id])
   subscription Subscription @relation(fields: [subscriptionId], references: [id])

@@ -429,6 +429,6 @@ exports.getCompanyCreditsAndStats = async (companyId) => {
     totalJobsPosted,
     remainingJobCredits: activeSubscription ? activeSubscription.jobPostingCredits : 0,
     totalDownloadedResumes,
-    remainingResumeCredits: activeSubscription ? activeSubscription.resumeAccessCredits : 0,
+    remainingApplications: activeSubscription ? activeSubscription.numberOfApplications : 0,
   };
 };

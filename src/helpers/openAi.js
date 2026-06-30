@@ -295,6 +295,112 @@ async function generateJobSubCategoryAI(prompt) {
   }
 }
 
+async function generateScreeningQuestionsAI(prompt) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You generate recruiter screening questions. Always respond with a valid JSON array of strings only.",
+          },
+          {
+            role: "user",
+            content: `${prompt}\n\nReturn ONLY a valid JSON array. No explanation.`,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 900,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ OpenAI API Error:", data);
+      throw new Error(data?.error?.message || "OpenAI API error");
+    }
+
+    const raw = data?.choices?.[0]?.message?.content;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      console.error("❌ JSON parse failed:", raw);
+      throw new Error("Invalid JSON format from AI");
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("AI response must be an array");
+    }
+
+    return parsed.filter((question) => typeof question === "string").slice(0, 8);
+  } catch (error) {
+    console.error("🔥 OpenAI Error:", error.message);
+    throw error;
+  }
+}
+
+async function generateAdditionalBenefitsAI(prompt) {
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You generate recruiter job benefit suggestions. Always respond with a valid JSON array of strings only.",
+          },
+          {
+            role: "user",
+            content: `${prompt}\n\nReturn ONLY a valid JSON array. No explanation.`,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 500,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ OpenAI API Error:", data);
+      throw new Error(data?.error?.message || "OpenAI API error");
+    }
+
+    const raw = data?.choices?.[0]?.message?.content;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      console.error("❌ JSON parse failed:", raw);
+      throw new Error("Invalid JSON format from AI");
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("AI response must be an array");
+    }
+
+    return parsed.filter((benefit) => typeof benefit === "string").slice(0, 8);
+  } catch (error) {
+    console.error("🔥 OpenAI Error:", error.message);
+    throw error;
+  }
+}
+
 async function generateJobScoreAI(prompt) {
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -708,6 +814,8 @@ module.exports = {
   generateJobOtherRequirementsAI,
   generateCompanyScoreAI,
   generateJobSubCategoryAI,
+  generateScreeningQuestionsAI,
+  generateAdditionalBenefitsAI,
   generateJobScoreAI,
   generateInternAboutAI,
   generateJobCategoryAI,

@@ -14,6 +14,7 @@ router.delete("/admin/delete-subscription-plan/:id", subscriptionController.dele
 router.post("/company/proceed-to-checkout", subscriptionController.proceedToCheckout)
 router.post("/company/verify-payment", subscriptionController.verifyPayment)
 router.post("/company/activate-free-plan", subscriptionController.activateFreeSubscriptionPlan)
+router.get("/company/access-status/:companyId", subscriptionController.getCompanySubscriptionAccessStatus)
 router.get("/company/get-purchased-subscriptions/:companyId", subscriptionController.getPurchasedSubscriptionPackages)
 router.get("/company/get-packages-job-post/:companyId", subscriptionController.getPurchasedSubscriptionPackagesForPostJob)
 router.get("/company/get-subscription-packages/:companyId", subscriptionController.getSubscriptionPackagesForCompany)

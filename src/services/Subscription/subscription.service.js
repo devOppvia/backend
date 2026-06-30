@@ -157,7 +157,7 @@ exports.getCompanySubscriptionCredits = async (companyId) => {
     select: {
       id: true,
       jobPostingCredits: true,
-      resumeAccessCredits: true,
+      numberOfApplications: true,
     },
   });
 };
@@ -166,7 +166,7 @@ exports.updateCompanySubscriptionCredits = async (
   companyId,
   subsciptionPlanId,
   jobPostingCredits,
-  resumeAccessCredits,
+  numberOfApplications,
   id
 ) => {
   if (id) {
@@ -178,9 +178,7 @@ exports.updateCompanySubscriptionCredits = async (
         jobPostingCredits: {
           increment: jobPostingCredits,
         },
-        resumeAccessCredits: {
-          increment: resumeAccessCredits,
-        },
+        numberOfApplications: numberOfApplications,
         subscriptionId: subsciptionPlanId,
       },
     });
@@ -188,7 +186,7 @@ exports.updateCompanySubscriptionCredits = async (
     return await prisma.companySubscription.create({
       data: {
         jobPostingCredits: jobPostingCredits,
-        resumeAccessCredits: resumeAccessCredits,
+        numberOfApplications: numberOfApplications,
         companyId: companyId,
         subscriptionId: subsciptionPlanId,
       },

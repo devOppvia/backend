@@ -33,11 +33,9 @@ const activateCompanySubscription = async (companyId, subscriptionPlan) => {
     },
   });
   let remainingJobCredits = 0;
-  let remainingResumeCredits = 0;
 
   if (existingActiveSubscription) {
     remainingJobCredits = existingActiveSubscription.jobPostingCredits || 0;
-    remainingResumeCredits = existingActiveSubscription.resumeAccessCredits || 0;
 
     await prisma.companySubscription.update({
       where: {
@@ -61,8 +59,7 @@ const activateCompanySubscription = async (companyId, subscriptionPlan) => {
       subscriptionId: subscriptionPlan.id,
       jobPostingCredits:
         subscriptionPlan.numberOfJobPosting + remainingJobCredits,
-      resumeAccessCredits:
-        subscriptionPlan.numberOfResumeAccess + remainingResumeCredits,
+      numberOfApplications: subscriptionPlan.numberOfApplications,
       subscriptionStart: subscriptionStart,
       subscriptionEnd: subscriptionEnd,
       jobDaysActive: subscriptionPlan.jobDaysActive,
@@ -124,7 +121,7 @@ exports.createSubscriptionPlan = async (req, res) => {
       actualPrice,
       discountedPrice,
       numberOfJobPosting,
-      numberOfResumeAccess,
+      numberOfApplications,
       jobDaysActive,
       expireDaysPackage,
       isFree = false,
@@ -155,8 +152,8 @@ exports.createSubscriptionPlan = async (req, res) => {
     if (!numberOfJobPosting) {
       return errorResponse(res, "Number of job posting is required", 400);
     }
-    if (!numberOfResumeAccess) {
-      return errorResponse(res, "Number of resume access is required", 400);
+    if (!numberOfApplications) {
+      return errorResponse(res, "Number of applications is required", 400);
     }
     if (!jobDaysActive) {
       return errorResponse(res, "Job days active is required", 400);
@@ -206,7 +203,7 @@ exports.createSubscriptionPlan = async (req, res) => {
         actualPrice,
         discountedPrice,
         numberOfJobPosting,
-        numberOfResumeAccess,
+        numberOfApplications,
         jobDaysActive,
         expireDaysPackage,
         isFree: validatedPrices.actualPrice === null,
@@ -272,7 +269,7 @@ exports.updateSubscriptionPlan = async (req, res) => {
       actualPrice,
       discountedPrice,
       numberOfJobPosting,
-      numberOfResumeAccess,
+      numberOfApplications,
       jobDaysActive,
       expireDaysPackage,
       isFree = false,
@@ -297,8 +294,8 @@ exports.updateSubscriptionPlan = async (req, res) => {
     if (!numberOfJobPosting) {
       return errorResponse(res, "Number of job posting is required", 400);
     }
-    if (!numberOfResumeAccess) {
-      return errorResponse(res, "Number of resume access is required", 400);
+    if (!numberOfApplications) {
+      return errorResponse(res, "Number of applications is required", 400);
     }
     if (!jobDaysActive) {
       return errorResponse(res, "Job days active is required", 400);
@@ -349,7 +346,7 @@ exports.updateSubscriptionPlan = async (req, res) => {
         actualPrice,
         discountedPrice,
         numberOfJobPosting,
-        numberOfResumeAccess,
+        numberOfApplications,
         jobDaysActive,
         expireDaysPackage,
         isFree: validatedPrices.actualPrice === null,
@@ -445,6 +442,61 @@ exports.getSubscriptionCreditsByCompany = async (req, res) => {
       200
     );
   } catch (error) {
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.getCompanySubscriptionAccessStatus = async (req, res) => {
+  try {
+    let { companyId } = req.params || {};
+    if (!companyId) {
+      return errorResponse(res, "Company id is required", 400);
+    }
+    if (!validator.isUUID(companyId)) {
+      return errorResponse(res, "Company id is invalid", 400);
+    }
+
+    const existingCompany = await prisma.company.findUnique({
+      where: {
+        id: companyId,
+      },
+    });
+    if (!existingCompany) {
+      return errorResponse(res, "Company not found", 400);
+    }
+
+    const subscriptionHistory = await prisma.companySubscription.findFirst({
+      where: {
+        companyId: companyId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        isActive: true,
+        subscriptionEnd: true,
+      },
+    });
+
+    const hasSubscriptionHistory = Boolean(subscriptionHistory);
+    const hasActiveSubscription =
+      Boolean(subscriptionHistory?.isActive) &&
+      subscriptionHistory.subscriptionEnd > new Date();
+
+    return successResponse(
+      res,
+      {
+        hasSubscriptionHistory,
+        hasActiveSubscription,
+        shouldChooseInitialPlan: !hasSubscriptionHistory,
+      },
+      "Subscription access status fetched successfully",
+      {},
+      200
+    );
+  } catch (error) {
+    console.error(error);
     return errorResponse(res, "Internal server error", 500);
   }
 };
@@ -663,7 +715,7 @@ exports.getPurchasedSubscriptionPackages = async (req, res) => {
         companyId: true,
         subscriptionId: true,
         jobPostingCredits: true,
-        resumeAccessCredits: true,
+        numberOfApplications: true,
         subscriptionStart: true,
         subscriptionEnd: true,
         subscription : {
@@ -705,7 +757,7 @@ exports.getPurchasedSubscriptionPackagesForPostJob = async (req, res) => {
         companyId: true,
         subscriptionId: true,
         jobPostingCredits: true,
-        resumeAccessCredits: true,
+        numberOfApplications: true,
         subscriptionStart: true,
         subscriptionEnd: true,
         jobDaysActive: true,
@@ -748,7 +800,7 @@ exports.getPurchasedSubscriptionPackagesForPostJob = async (req, res) => {
               companyId: "",
               subscriptionId: "",
               jobPostingCredits: 1,
-              resumeAccessCredits: 10,
+              numberOfApplications: 10,
               subscriptionStart: "",
               subscriptionEnd: "",
               jobDaysActive: 3,
@@ -829,7 +881,7 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
         actualPrice: true,
         discountedPrice: true,
         numberOfJobPosting: true,
-        numberOfResumeAccess: true,
+        numberOfApplications: true,
         jobDaysActive: true,
         expireDaysPackage: true,
         isFree: true,
@@ -898,7 +950,7 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
         const isLowerPlan =
           lowestPrice !== null && payableAmount < lowestPrice;
     
-        let buttonText = "Buy Now";
+        let buttonText = subscription.isFree ? "Continue With Free Plan" :  "Buy Now";
         let isDisabled = false;
     
         // 🚫 deleted plans (handled internally)

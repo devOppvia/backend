@@ -8,13 +8,13 @@ const jobSubCategoryServices = require("../../services/JobSubCategory/jobSubCate
 const companyRegistrationServices = require("../../services/CompanyAuth/companyAuth.service");
 const axios = require("axios");
 const validator = require("validator");
-const { generateJobPrompt, generateJobOtherRequirementsPrompt, generateSubCategoryPrompt, generateRoleTitlePrompt } = require("../../helpers/generateJobAboutPrompt");
+const { generateJobPrompt, generateJobOtherRequirementsPrompt, generateSubCategoryPrompt, generateRoleTitlePrompt, generateScreeningQuestionsPrompt, generateAdditionalBenefitsPrompt } = require("../../helpers/generateJobAboutPrompt");
 const { sendJobStatusMail } = require("../../helpers/sendMail");
 const {
   sendWebPushNotification,
 } = require("../../helpers/WebPushNotification/notificationHelper");
 const prisma = require("../../config/database");
-const { generateJobAboutAI, generateJobTitlesApi, generateJobOtherRequirementsAI, generateJobSubCategoryAI } = require("../../helpers/openAi");
+const { generateJobAboutAI, generateJobTitlesApi, generateJobOtherRequirementsAI, generateJobSubCategoryAI, generateScreeningQuestionsAI, generateAdditionalBenefitsAI } = require("../../helpers/openAi");
 
 exports.submitJobOpening = async (req, res) => {
   try {
@@ -32,7 +32,7 @@ exports.submitJobOpening = async (req, res) => {
       state,
       city,
       stipend,
-      additionalBenefits,
+      additionalBenefits = [],
       jobType,
       jobStatus,
       minStipend,
@@ -139,12 +139,10 @@ if(jobType !== "REMOTE") {
         return errorResponse(res, "Please enter job type");
       }
     }
-    if (!additionalBenefits) {
-      return errorResponse(res, "Additional benefits is required", 400);
-    }
     if (!Array.isArray(additionalBenefits)) {
       return errorResponse(res, "Additional benefits is in array format", 400);
     }
+    req.body.additionalBenefits = additionalBenefits;
     if (jobStatus) {
       let validStatus = ["DRAFT"];
       if (!validStatus.includes(jobStatus)) {
@@ -520,33 +518,38 @@ exports.updateJobStatus = async (req, res) => {
         jobDaysActive = 3;
       }
     }
-    if(jobStatus === "REJECTED"){
-      if(subscriptionId){
-        let currentPackage = await prisma.companySubscription.findFirst({
-          where : {
-            subscriptionId : subscriptionId,
-            isActive : true
+    if (existingJob.jobStatus === "REVIEW" && jobStatus === "REJECTED") {
+      const subscriptionWhere = {
+        companyId,
+        isActive: true,
+      };
+
+      if (subscriptionId) {
+        subscriptionWhere.subscriptionId = subscriptionId;
+      }
+
+      let currentPackage = await prisma.companySubscription.findFirst({
+        where: subscriptionWhere,
+        select: {
+          id: true,
+          subscriptionId: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (currentPackage) {
+        await prisma.companySubscription.update({
+          where: {
+            id: currentPackage.id,
           },
-          select : {
-            id : true,
-            subscriptionId : true
-          },
-          orderBy : {
-            createdAt : "desc"
-          }
-        })
-        if(currentPackage){
-          await prisma.companySubscription.update({
-            where : {
-              id : currentPackage.id
+          data: {
+            jobPostingCredits: {
+              increment: 1,
             },
-            data : {
-              jobPostingCredits : {
-                increment : 1
-              }
-            }
-          })
-        }
+          },
+        });
       }
     }
 
@@ -568,6 +571,100 @@ exports.updateJobStatus = async (req, res) => {
   }
 };
 
+exports.resumeJob = async (req, res) => {
+  try {
+    const { jobId } = req.params || {};
+    const { companySubscriptionId } = req.body || {};
+
+    if (!jobId) {
+      return errorResponse(res, "Job id is required", 400);
+    }
+    if (!validator.isUUID(jobId)) {
+      return errorResponse(res, "Invalid job id", 400);
+    }
+    if (!companySubscriptionId) {
+      return errorResponse(res, "Company subscription id is required", 400);
+    }
+    if (!validator.isUUID(companySubscriptionId)) {
+      return errorResponse(res, "Invalid company subscription id", 400);
+    }
+
+    const now = new Date();
+
+    const result = await prisma.$transaction(async (tx) => {
+      const job = await tx.job.findFirst({
+        where: {
+          id: jobId,
+          isDelete: false,
+        },
+      });
+
+      if (!job) {
+        throw { statusCode: 404, message: "Job does not exist" };
+      }
+      if (job.jobStatus !== "PAUSED") {
+        throw { statusCode: 400, message: "Only paused jobs can be resumed" };
+      }
+      if (!job.jobExpireDate || new Date(job.jobExpireDate) <= now) {
+        throw { statusCode: 400, message: "Job is expired and cannot be resumed" };
+      }
+
+      const companySubscription = await tx.companySubscription.findFirst({
+        where: {
+          id: companySubscriptionId,
+          companyId: job.companyId,
+          isActive: true,
+        },
+      });
+
+      if (!companySubscription) {
+        throw { statusCode: 404, message: "Company subscription does not exist" };
+      }
+      if (new Date(companySubscription.subscriptionEnd) <= now) {
+        throw { statusCode: 400, message: "Company subscription is expired" };
+      }
+      if ((companySubscription.jobPostingCredits || 0) < 1) {
+        throw { statusCode: 400, message: "No job posting credits available" };
+      }
+
+      const updatedJob = await tx.job.update({
+        where: {
+          id: jobId,
+        },
+        data: {
+          numberOfApplications:
+            (job.numberOfApplications || 0) +
+            (companySubscription.numberOfApplications || 0),
+          subscriptionId: companySubscription.subscriptionId,
+          jobStatus: "APPROVED",
+        },
+      });
+
+      await tx.companySubscription.update({
+        where: {
+          id: companySubscription.id,
+        },
+        data: {
+          jobPostingCredits: {
+            decrement: 1,
+          },
+        },
+      });
+
+      return updatedJob;
+    });
+
+    return successResponse(res, result, "Job resumed successfully", {}, 200);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(
+      res,
+      error?.message || "Internal server error",
+      error?.statusCode || 500
+    );
+  }
+};
+
 exports.updateJobDetails = async (req, res) => {
   try {
     let { jobId } = req.params || {};
@@ -584,7 +681,7 @@ exports.updateJobDetails = async (req, res) => {
       numberOfOpenings,
       location,
       stipend,
-      additionalBenefits,
+      additionalBenefits = [],
       jobType,
       minStipend,
       maxStipend,
@@ -646,12 +743,10 @@ exports.updateJobDetails = async (req, res) => {
         return errorResponse(res, "Please enter job type");
       }
     }
-    if (!additionalBenefits) {
-      return errorResponse(res, "Additional benefits is required", 400);
-    }
     if (!Array.isArray(additionalBenefits)) {
       return errorResponse(res, "Additional benefits is in array format", 400);
     }
+    req.body.additionalBenefits = additionalBenefits;
     await jobManagementServices.updateJobDetails(jobId, req.body);
     return successResponse(res, {}, "Job updated successfully", 200);
   } catch (error) {
@@ -706,13 +801,18 @@ exports.generateJobAbout = async (req, res) => {
       internsRequired,
       stipend,
         additionalBenefits,
+        applicationType,
         companyId
     } = req.body || {};
     if (!title) {
       return errorResponse(res, "Postion title is required", 400);
     }
+   
      if (!companyId) {
       return errorResponse(res, "CompanyId is required", 400);
+    }
+     if (!applicationType) {
+      return errorResponse(res, "applicationType is required", 400);
     }
     if (!jobCategoryId) {
       return errorResponse(res, "Job Category id is required", 400);
@@ -791,13 +891,14 @@ exports.generateJobAbout = async (req, res) => {
       numberOfInterns: internsRequired,
       stipend: stipend,
       additionalBenefits: additionalBenefits,
-      CompanyName : CompanyDetails?.companyName
+      CompanyName : CompanyDetails?.companyName,
+      applicationType : applicationType
     };
 
     console.log("body : " , body)
     let prompt = generateJobPrompt(body);
 
-    console.log("prompts : "  , prompt)
+    console.log("prompts : job about us ==> "  , prompt)
 
     
     // let description = await jobManagementServices.generateJobAbout(prompt);
@@ -984,6 +1085,74 @@ exports.updateJobBulkStatusUpdate = async (req, res) => {
 
     await jobManagementServices.updateJobBulkStatus(status, jobIds);
     return successResponse(res, {}, "Status updated successfully", {}, 200);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+
+exports.generateScreeningQuestions = async (req, res) => {
+  try {
+    const jobData = req.body || {};
+    const title = jobData.title || jobData.jobTitle;
+    const skills = jobData.skills || [];
+
+    if (!title) {
+      return errorResponse(res, "Position title is required", 400);
+    }
+    if (!Array.isArray(skills)) {
+      return errorResponse(res, "Skills must be in array format", 400);
+    }
+    if (skills.length === 0) {
+      return errorResponse(res, "At least one skill is required", 400);
+    }
+
+    const prompt = generateScreeningQuestionsPrompt(jobData);
+    console.log("prompt is : " , prompt)
+    const questions = await generateScreeningQuestionsAI(prompt);
+
+    if (!questions.length) {
+      return errorResponse(res, "No screening questions generated", 500);
+    }
+
+    return successResponse(
+      res,
+      questions,
+      "Screening questions generated successfully",
+      {},
+      200
+    );
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+
+exports.generateAdditionalBenefits = async (req, res) => {
+  try {
+    const jobData = req.body || {};
+    const title = jobData.title || jobData.jobTitle;
+
+    if (!title) {
+      return errorResponse(res, "Position title is required", 400);
+    }
+
+    const prompt = generateAdditionalBenefitsPrompt(jobData);
+    const benefits = await generateAdditionalBenefitsAI(prompt);
+
+    if (!benefits.length) {
+      return errorResponse(res, "No additional benefits generated", 500);
+    }
+
+    return successResponse(
+      res,
+      benefits,
+      "Additional benefits generated successfully",
+      {},
+      200
+    );
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);

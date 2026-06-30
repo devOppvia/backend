@@ -56,7 +56,7 @@ exports.submitJobOpening = async (data) => {
       id : true,
       subscriptionId : true,
       jobDaysActive : true,
-      resumeAccessCredits : true
+      numberOfApplications : true
     },
     orderBy : {
       createdAt : "desc"
@@ -64,7 +64,7 @@ exports.submitJobOpening = async (data) => {
   })
   console.log("current sub ==> " , currentPackage)
   let jobDaysActive = currentPackage?.jobDaysActive
-  let resumeAccessCredits = currentPackage?.resumeAccessCredits
+  let numberOfApplications = currentPackage?.numberOfApplications
   
   if(currentPackage){
    
@@ -117,7 +117,7 @@ exports.submitJobOpening = async (data) => {
       subscriptionId : subscriptionId,
       applicationType : applicationType,
       jobDaysActive : jobDaysActive,
-      resumeAccessCredits : resumeAccessCredits,
+      numberOfApplications : numberOfApplications,
       experience : applicationType === "JOB" ? experience : null,
       callEnable : aiCall?.enabled,
       callConditionScore : aiCall?.callMode === "SCORE" ? aiCall.minScore : 0,
@@ -246,7 +246,8 @@ exports.getJobsBasedOnStatus = async (
       appliedCandidates : true,
       minStipend : true,
       maxStipend : true,
-      employmentType : true
+      employmentType : true,
+      jobExpireDate :  true
     },
     skip,
     take,

@@ -206,36 +206,18 @@ async function getJobPostingExpired() {
       where: {
         isActive: true,
         
-        OR : [
-          {
-            jobPostingCredits : {
-              lte : 0
-            }
-          },
-          {
-            resumeAccessCredits : {
-              lte : 0
-            }
-          }
-        ]
+        jobPostingCredits : {
+          lte : 0
+        }
       },
     });
     if (expiredCredits.length > 0) {
       await prisma.companySubscription.updateMany({
         where: {
           isActive: true,
-          OR : [
-            {
-              jobPostingCredits : {
-                lte : 0
-              }
-            },
-            {
-              resumeAccessCredits : {
-                lte : 0
-              }
-            }
-          ]
+          jobPostingCredits : {
+            lte : 0
+          }
         },
         data: {
           isActive: false,
@@ -358,4 +340,3 @@ job1.start();
 job2.start();
 job3.start();
 job4.start();
-

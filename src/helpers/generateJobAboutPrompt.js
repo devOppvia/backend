@@ -26,6 +26,7 @@ function generateJobPrompt(jobData) {
     numberOfInterns = "",
     stipend = "",
     additionalBenefits = [],
+    applicationType = "",
     CompanyName
   } = jobData;
 
@@ -34,26 +35,26 @@ function generateJobPrompt(jobData) {
   const benefits =
     additionalBenefits.length > 0 ? additionalBenefits.join(", ") : "";
 
-  return `Create a professional internship job description for:
+  return `Create a professional ${applicationType} description for:
 
     Company Name : ${CompanyName}
   
-    Internship Position: ${positionTitle}
+    Position: ${positionTitle}
     Category: ${category}${subCategory ? ` - ${subCategory}` : ""}
     Required Skills: ${skills}
-    Duration: ${duration}
+    ${applicationType !== "Job" && `Duration: ${duration}`}
     Working Hours: ${workingHours}
-    Internship Type: ${internshipType}
+    ${applicationType} Type: ${internshipType}
     Location: ${CompanyName},  ${location ? ` in ${location}` : ""}
-    Number of Interns: ${numberOfInterns}
-    Stipend: ${stipend}
+    Number of Openings: ${numberOfInterns}
+    ${applicationType !== "Job" && `Stipend: ${stipend}`}
     ${benefits ? `Additional Benefits: ${benefits}` : ""}
   
     Write 140-180 words with:
-    - Overview of the internship and company culture
+    - Overview of the ${applicationType} and company culture
     - Key responsibilities and expected contributions
     - Learning opportunities, mentorship, and skill development
-    - Why this internship will be valuable for career growth
+    - Why this ${applicationType} will be valuable for career growth
     - Encourage motivated students or fresh graduates to apply
 
     note not add markdown like ** and other, length of content is only 180 characters including spaces
@@ -159,6 +160,135 @@ Output format:
 • Output **only** a valid JSON array of 8 strings, nothing else. Example:
   ["Subcategory 1", "Subcategory 2", ..., "Subcategory 8"]
 • Do not include explanation, commentary, bullet lists, or extra punctuation outside the JSON array.
+`;
+}
+
+function generateScreeningQuestionsPrompt(jobData) {
+  const {
+    applicationType = "INTERNSHIP",
+    title = "",
+    jobTitle = "",
+    jobCategoryId = "",
+    jobSubCategoryId = "",
+    skills = [],
+    description = "",
+    aboutJob = "",
+    otherInfo = "",
+    otherRequirements = "",
+    duration = "",
+    internshipDuration = "",
+    workingHours = "",
+    workType = "",
+    jobType = "",
+    location = "",
+    city = "",
+    state = "",
+    internsRequired = "",
+    numberOfOpenings = "",
+    stipend = "",
+    salary = "",
+    additionalBenefits = [],
+    benefits = [],
+    experienceRange = "",
+    experience = "",
+  } = jobData || {};
+
+  const selectedBenefits =
+    additionalBenefits.length > 0 ? additionalBenefits : benefits;
+
+  return `
+You are creating AI phone-screening questions for a recruiter.
+
+Generate exactly 5 concise screening questions for this ${applicationType}:
+
+Title: ${jobTitle || title || "N/A"}
+Category ID/Name: ${jobCategoryId || "N/A"}
+Subcategory ID/Name: ${jobSubCategoryId || "N/A"}
+Required Skills: ${Array.isArray(skills) && skills.length ? skills.join(", ") : "N/A"}
+Description: ${aboutJob || description || "N/A"}
+Other Requirements: ${otherRequirements || otherInfo || "N/A"}
+${applicationType !== "Job" &&`Duration: ${internshipDuration || duration || "N/A"}`}
+Employment Type/Hours: ${workingHours || "N/A"}
+Work Type: ${jobType || workType || "N/A"}
+Location: ${location || [city, state].filter(Boolean).join(", ") || "N/A"}
+Openings: ${numberOfOpenings || internsRequired || "N/A"}
+Compensation: ${JSON.stringify(stipend || salary || "N/A")}
+Experience: ${experience || experienceRange || "N/A"}
+Additional Benefits: ${
+    Array.isArray(selectedBenefits) && selectedBenefits.length
+      ? selectedBenefits.join(", ")
+      : "N/A"
+  }
+
+Rules:
+- Each question must be one sentence.
+- Questions should be suitable for a short AI voice screening call.
+- Cover motivation, availability, relevant skills, project/work examples, communication, location/work mode fit, and compensation/expectation fit where relevant.
+- Do not ask discriminatory or personal protected-class questions.
+- Do not include numbering.
+- Return ONLY a valid JSON array of 8 strings, no markdown and no explanation.
+Example: ["Question 1?", "Question 2?", "Question 3?", "Question 4?", "Question 5?", "Question 6?", "Question 7?", "Question 8?"]
+`;
+}
+
+function generateAdditionalBenefitsPrompt(jobData) {
+  const {
+    applicationType = "INTERNSHIP",
+    title = "",
+    jobTitle = "",
+    jobCategoryId = "",
+    jobSubCategoryId = "",
+    skills = [],
+    description = "",
+    aboutJob = "",
+    duration = "",
+    internshipDuration = "",
+    workingHours = "",
+    workType = "",
+    jobType = "",
+    location = "",
+    city = "",
+    state = "",
+    stipend = "",
+    salary = "",
+    benefits = [],
+    additionalBenefits = [],
+    experienceRange = "",
+    experience = "",
+  } = jobData || {};
+
+  const existingBenefits =
+    additionalBenefits.length > 0 ? additionalBenefits : benefits;
+
+  return `
+You are helping a recruiter suggest attractive but realistic additional benefits for a ${applicationType}.
+
+Generate exactly 5 concise benefit suggestions for:
+
+Title: ${jobTitle || title || "N/A"}
+Category ID/Name: ${jobCategoryId || "N/A"}
+Subcategory ID/Name: ${jobSubCategoryId || "N/A"}
+Required Skills: ${Array.isArray(skills) && skills.length ? skills.join(", ") : "N/A"}
+Description: ${aboutJob || description || "N/A"}
+Duration: ${internshipDuration || duration || "N/A"}
+Employment Type/Hours: ${workingHours || "N/A"}
+Work Type: ${jobType || workType || "N/A"}
+Location: ${location || [city, state].filter(Boolean).join(", ") || "N/A"}
+Compensation: ${JSON.stringify(stipend || salary || "N/A")}
+Experience: ${experience || experienceRange || "N/A"}
+Already Added Benefits: ${
+    Array.isArray(existingBenefits) && existingBenefits.length
+      ? existingBenefits.join(", ")
+      : "N/A"
+  }
+
+Rules:
+- Each benefit must be short, 2-5 words.
+- Suggestions must be practical for this role and company hiring context.
+- Do not duplicate or closely repeat already added benefits.
+- Avoid salary/stipend values, legal promises, or unrealistic perks.
+- Return ONLY a valid JSON array of 5 strings, no markdown and no explanation.
+Example: ["Flexible Hours", "Mentorship Sessions", "Certificate", "Remote Work Option", "Project Ownership", "Learning Budget", "Networking Sessions", "Performance Bonus"]
 `;
 }
 
@@ -346,6 +476,8 @@ module.exports = {
   generateJobPrompt,
   generateCategoryPrompt,
   generateSubCategoryPrompt,
+  generateScreeningQuestionsPrompt,
+  generateAdditionalBenefitsPrompt,
   generateSkillsPrompt,
   generateJobOtherRequirementsPrompt,
   generateInternAboutUsPrompt,

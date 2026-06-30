@@ -51,35 +51,27 @@ exports.applyJob = async (req, res) => {
     if (!existingIntern) {
       return errorResponse(res, "Intern does not exist", 404);
     }
-    let { subscriptionId } = existingJob || {};
-    if (subscriptionId) {
-      let currentPlan = await prisma.companySubscription.findFirst({
-        where: {
-          subscriptionId: subscriptionId,
-          companyId: companyId,
-          isActive: true,
-        },
-      });
-      if (currentPlan) {
-        
-        await prisma.companySubscription.update({
-          where: {
-            id: currentPlan.id,
-          },
-          data: {
-            resumeAccessCredits: {
-              decrement: 1,
-            },
-          },
-        });
-      }
-    }
-    //  else {
       let existingJobs = await prisma.job.findFirst({
         where: {
           id: jobId,
         },
       });
+      const applicationLimit = existingJobs?.numberOfApplications || 0;
+      if (
+        applicationLimit > 0 &&
+        existingJobs.appliedCandidates >= applicationLimit
+      ) {
+        await prisma.job.update({
+          where: {
+            id: jobId,
+          },
+          data: {
+            jobStatus: "PAUSED",
+          },
+        });
+        return errorResponse(res, "Application limit reached for this job", 400);
+      }
+
       if (existingJobs) {
         existingJobs = await prisma.job.update({
           where: {
@@ -92,17 +84,19 @@ exports.applyJob = async (req, res) => {
           },
         });
       }
-      if (existingJobs.resumeAccessCredits === existingJobs.appliedCandidates) {
+      if (
+        existingJobs.numberOfApplications > 0 &&
+        existingJobs.appliedCandidates >= existingJobs.numberOfApplications
+      ) {
         await prisma.job.update({
           where: {
             id: jobId,
           },
           data: {
-            jobStatus: "COMPLETED",
+            jobStatus: "PAUSED",
           },
         });
       }
-    // }
 
    GenerateInternScoreAI(existingIntern, existingJobs);
 
