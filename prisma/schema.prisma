@@ -427,12 +427,13 @@ enum SubscriptionType {
 model Subscription {
   id                   String  @id @unique @default(uuid())
   packageName          String
-  actualPrice          Int
-  discountedPrice      Int
+  actualPrice          Int?
+  discountedPrice      Int?
   numberOfJobPosting   Int
   numberOfResumeAccess Int
   jobDaysActive        Int
   expireDaysPackage    Int
+  isFree               Boolean @default(false)
   isDelete             Boolean @default(false)
   isRecommended        Boolean @default(false)
 

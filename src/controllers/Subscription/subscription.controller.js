@@ -13,6 +13,110 @@ const razorpay = new Razorpay({
   key_id: "rzp_test_RlYjFWZ8v5e15u",
   key_secret: "2tFwzJUpNpjYMVRpyNJKYaUj",
 });
+
+const hasPriceValue = (value) =>
+  value !== undefined && value !== null && value !== "";
+
+const normalizePrice = (value) => (hasPriceValue(value) ? Number(value) : null);
+
+const getPayableAmount = (subscription) =>
+  subscription.discountedPrice ?? subscription.actualPrice ?? 0;
+
+const sortSubscriptionsByPayableAmount = (subscriptions) =>
+  subscriptions.sort((a, b) => getPayableAmount(a) - getPayableAmount(b));
+
+const activateCompanySubscription = async (companyId, subscriptionPlan) => {
+  let existingActiveSubscription = await prisma.companySubscription.findFirst({
+    where: {
+      companyId: companyId,
+      isActive: true,
+    },
+  });
+  let remainingJobCredits = 0;
+  let remainingResumeCredits = 0;
+
+  if (existingActiveSubscription) {
+    remainingJobCredits = existingActiveSubscription.jobPostingCredits || 0;
+    remainingResumeCredits = existingActiveSubscription.resumeAccessCredits || 0;
+
+    await prisma.companySubscription.update({
+      where: {
+        id: existingActiveSubscription.id,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+  }
+
+  const subscriptionStart = new Date();
+  const subscriptionEnd = new Date(subscriptionStart);
+  subscriptionEnd.setDate(
+    subscriptionEnd.getDate() + subscriptionPlan.expireDaysPackage
+  );
+
+  return await prisma.companySubscription.create({
+    data: {
+      companyId: companyId,
+      subscriptionId: subscriptionPlan.id,
+      jobPostingCredits:
+        subscriptionPlan.numberOfJobPosting + remainingJobCredits,
+      resumeAccessCredits:
+        subscriptionPlan.numberOfResumeAccess + remainingResumeCredits,
+      subscriptionStart: subscriptionStart,
+      subscriptionEnd: subscriptionEnd,
+      jobDaysActive: subscriptionPlan.jobDaysActive,
+    },
+  });
+};
+
+const validateSubscriptionPrices = (actualPrice, discountedPrice, isFree) => {
+  const normalizedActualPrice = normalizePrice(actualPrice);
+  const normalizedDiscountedPrice = normalizePrice(discountedPrice);
+  const isFreePlan =
+    isFree === true ||
+    (normalizedActualPrice === null && normalizedDiscountedPrice === null);
+
+  if (isFreePlan) {
+    return {
+      actualPrice: null,
+      discountedPrice: null,
+      error: null,
+    };
+  }
+
+  if (
+    normalizedActualPrice === null ||
+    Number.isNaN(normalizedActualPrice) ||
+    normalizedActualPrice <= 0
+  ) {
+    return { error: "Actual price is required" };
+  }
+
+  if (
+    normalizedDiscountedPrice !== null &&
+    (Number.isNaN(normalizedDiscountedPrice) ||
+      normalizedDiscountedPrice <= 0)
+  ) {
+    return { error: "Discounted price is required" };
+  }
+
+  if (
+    normalizedDiscountedPrice !== null &&
+    normalizedActualPrice <= normalizedDiscountedPrice
+  ) {
+    return {
+      error: "Actual price must be greater than discounted price",
+    };
+  }
+
+  return {
+    actualPrice: normalizedActualPrice,
+    discountedPrice: normalizedDiscountedPrice,
+    error: null,
+  };
+};
+
 exports.createSubscriptionPlan = async (req, res) => {
   try {
     let {
@@ -23,6 +127,7 @@ exports.createSubscriptionPlan = async (req, res) => {
       numberOfResumeAccess,
       jobDaysActive,
       expireDaysPackage,
+      isFree = false,
       isRecommended = false
     } = req.body || {};
 
@@ -37,32 +142,16 @@ exports.createSubscriptionPlan = async (req, res) => {
         400
       );
     }
-    if (actualPrice === undefined || actualPrice === null || actualPrice === "") {
-      return errorResponse(res, "Actual price is required", 400);
+    const validatedPrices = validateSubscriptionPrices(
+      actualPrice,
+      discountedPrice,
+      isFree
+    );
+    if (validatedPrices.error) {
+      return errorResponse(res, validatedPrices.error, 400);
     }
-    if (
-      discountedPrice === undefined ||
-      discountedPrice === null ||
-      discountedPrice === ""
-    ) {
-      return errorResponse(res, "Discounted price is required", 400);
-    }
-    actualPrice = Number(actualPrice);
-    discountedPrice = Number(discountedPrice);
-
-    if (Number.isNaN(actualPrice) || actualPrice < 0) {
-      return errorResponse(res, "Actual price is required", 400);
-    }
-    if (Number.isNaN(discountedPrice) || discountedPrice < 0) {
-      return errorResponse(res, "Discounted price is required", 400);
-    }
-    if (actualPrice < discountedPrice) {
-      return errorResponse(
-        res,
-        "Actual price must be greater than or equal to discounted price",
-        400
-      );
-    }
+    actualPrice = validatedPrices.actualPrice;
+    discountedPrice = validatedPrices.discountedPrice;
     if (!numberOfJobPosting) {
       return errorResponse(res, "Number of job posting is required", 400);
     }
@@ -120,6 +209,7 @@ exports.createSubscriptionPlan = async (req, res) => {
         numberOfResumeAccess,
         jobDaysActive,
         expireDaysPackage,
+        isFree: validatedPrices.actualPrice === null,
         isRecommended
       },
     });
@@ -138,6 +228,9 @@ exports.createSubscriptionPlan = async (req, res) => {
 exports.getAllSubscriptions = async (req, res) => {
   try {
     let existingSubscriptions = await subscriptionServices.getAllSubscription();
+    existingSubscriptions = sortSubscriptionsByPayableAmount(
+      existingSubscriptions
+    );
     return successResponse(
       res,
       existingSubscriptions,
@@ -156,10 +249,10 @@ exports.getSubscriptionPlanForAdmin = async (req, res) => {
       where: {
         isDelete: false,
       },
-      orderBy: {
-        discountedPrice: "asc",
-      },
     });
+    existingSubscriptions = sortSubscriptionsByPayableAmount(
+      existingSubscriptions
+    );
     return successResponse(
       res,
       existingSubscriptions,
@@ -182,6 +275,7 @@ exports.updateSubscriptionPlan = async (req, res) => {
       numberOfResumeAccess,
       jobDaysActive,
       expireDaysPackage,
+      isFree = false,
       isRecommended = false
     } = req.body || {};
     if (!id) {
@@ -190,32 +284,16 @@ exports.updateSubscriptionPlan = async (req, res) => {
     if (!packageName) {
       return errorResponse(res, "Package name is required", 400);
     }
-    if (actualPrice === undefined || actualPrice === null || actualPrice === "") {
-      return errorResponse(res, "Actual price is required", 400);
+    const validatedPrices = validateSubscriptionPrices(
+      actualPrice,
+      discountedPrice,
+      isFree
+    );
+    if (validatedPrices.error) {
+      return errorResponse(res, validatedPrices.error, 400);
     }
-    if (
-      discountedPrice === undefined ||
-      discountedPrice === null ||
-      discountedPrice === ""
-    ) {
-      return errorResponse(res, "Discounted price is required", 400);
-    }
-    actualPrice = Number(actualPrice);
-    discountedPrice = Number(discountedPrice);
-
-    if (Number.isNaN(actualPrice) || actualPrice < 0) {
-      return errorResponse(res, "Actual price is required", 400);
-    }
-    if (Number.isNaN(discountedPrice) || discountedPrice < 0) {
-      return errorResponse(res, "Discounted price is required", 400);
-    }
-    if (actualPrice < discountedPrice) {
-      return errorResponse(
-        res,
-        "Actual price must be greater than or equal to discounted price",
-        400
-      );
-    }
+    actualPrice = validatedPrices.actualPrice;
+    discountedPrice = validatedPrices.discountedPrice;
     if (!numberOfJobPosting) {
       return errorResponse(res, "Number of job posting is required", 400);
     }
@@ -274,6 +352,7 @@ exports.updateSubscriptionPlan = async (req, res) => {
         numberOfResumeAccess,
         jobDaysActive,
         expireDaysPackage,
+        isFree: validatedPrices.actualPrice === null,
       },
     });
     return successResponse(
@@ -387,9 +466,16 @@ exports.proceedToCheckout = async (req, res) => {
     if (!existingPackage) {
       return errorResponse(res, "Subscription plan not found", 400);
     }
-    let { discountedPrice } = existingPackage;
+    if (existingPackage.isFree) {
+      return errorResponse(
+        res,
+        "Free plan does not require payment. Please activate it directly.",
+        400
+      );
+    }
+    const payableAmount = getPayableAmount(existingPackage);
     const options = {
-      amount: discountedPrice * 100,
+      amount: payableAmount * 100,
       currency: "INR",
       receipt: `rcpt${Date.now()}`,
     };
@@ -444,60 +530,116 @@ exports.verifyPayment = async (req, res) => {
       .digest("hex");
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
     if (payment.status === "captured") {
-      let existingActiveSubscription = await prisma.companySubscription.findFirst({
-        where : {
-          companyId : companyId,
-          isActive : true
-        }
-      })
-      let remainingJobCredits = 0
-      let remainingResumeCredits = 0
-      if(existingActiveSubscription){
-        remainingJobCredits = existingActiveSubscription.jobPostingCredits || 0
-        remainingResumeCredits = existingActiveSubscription.resumeAccessCredits || 0
-
-        await prisma.companySubscription.update({
-          where : {
-            id : existingActiveSubscription.id
-          },
-          data : {
-            isActive : false
-          }
-        })
-      }
       await prisma.paymentHistory.create({
         data: {
           companyId: companyId,
           subscriptionId: subsciptionPlanId,
-          amountPaid: selectedSubscriptionPlan.discountedPrice,
+          amountPaid: getPayableAmount(selectedSubscriptionPlan),
           paymentStatus: payment.status,
           razorpay_order_id: razorpay_order_id,
           razorpay_signature: razorpay_signature,
           razorpay_payment_id: razorpay_payment_id,
         },
       });
-      const subscriptionStart = new Date();
-      const subscriptionEnd = new Date(subscriptionStart);
-      subscriptionEnd.setDate(
-        subscriptionEnd.getDate() + selectedSubscriptionPlan.expireDaysPackage
-      );
-      
-      await prisma.companySubscription.create({
-        data: {
-          companyId: companyId,
-          subscriptionId: subsciptionPlanId,
-          jobPostingCredits: selectedSubscriptionPlan.numberOfJobPosting + remainingJobCredits,
-          resumeAccessCredits: selectedSubscriptionPlan.numberOfResumeAccess + remainingResumeCredits,
-          subscriptionStart: subscriptionStart,
-          subscriptionEnd: subscriptionEnd,
-          jobDaysActive : selectedSubscriptionPlan.jobDaysActive
-        },
-      });
+      await activateCompanySubscription(companyId, selectedSubscriptionPlan);
       return res.json({ status: "success", payment });
     } else {
       return res.status(400).json({ status: "failed", payment });
     }
   } catch (error) {
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.activateFreeSubscriptionPlan = async (req, res) => {
+  try {
+    let { companyId, subsciptionPlanId } = req.body || {};
+
+    if (!companyId) return errorResponse(res, "Company id is required", 400);
+    if (!validator.isUUID(companyId)) {
+      return errorResponse(res, "Company id is invalid", 400);
+    }
+    if (!subsciptionPlanId) {
+      return errorResponse(res, "Subscription plan id is required", 400);
+    }
+    if (!validator.isUUID(subsciptionPlanId)) {
+      return errorResponse(res, "Subscription plan id is invalid", 400);
+    }
+
+    let existingCompany = await prisma.company.findUnique({
+      where: {
+        id: companyId,
+      },
+    });
+    if (!existingCompany) {
+      return errorResponse(res, "Company not found", 400);
+    }
+
+    let selectedSubscriptionPlan = await prisma.subscription.findFirst({
+      where: {
+        id: subsciptionPlanId,
+        isDelete: false,
+      },
+    });
+    if (!selectedSubscriptionPlan) {
+      return errorResponse(res, "Subscription plan not found", 404);
+    }
+    if (!selectedSubscriptionPlan.isFree) {
+      return errorResponse(res, "This subscription plan is not free", 400);
+    }
+
+    const usedFreeSubscription = await prisma.companySubscription.findFirst({
+      where: {
+        companyId: companyId,
+        subscription: {
+          isFree: true,
+        },
+      },
+      include: {
+        subscription: {
+          select: {
+            packageName: true,
+          },
+        },
+      },
+    });
+
+    if (usedFreeSubscription) {
+      const isExpired =
+        !usedFreeSubscription.isActive ||
+        usedFreeSubscription.subscriptionEnd <= new Date();
+      return errorResponse(
+        res,
+        isExpired
+          ? "Your free plan has expired and is not available again."
+          : "You already have an active free plan.",
+        400
+      );
+    }
+
+    await prisma.paymentHistory.create({
+      data: {
+        companyId: companyId,
+        subscriptionId: subsciptionPlanId,
+        amountPaid: 0,
+        paymentStatus: "captured",
+      },
+    });
+
+    const subscription = await activateCompanySubscription(
+      companyId,
+      selectedSubscriptionPlan
+    );
+
+    return successResponse(
+      res,
+      subscription,
+      "Free subscription activated successfully",
+      {},
+      200
+    );
+  } catch (error) {
+    console.error(error);
     return errorResponse(res, "Internal server error", 500);
   }
 };
@@ -667,6 +809,15 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
     let purchasedSubscriptionIds = purchasedSubscriptions.map(
       (subscription) => subscription.subscriptionId
     );
+    const usedFreeSubscription = await prisma.companySubscription.findFirst({
+      where: {
+        companyId: companyId,
+        subscription: {
+          isFree: true,
+        },
+      },
+    });
+    const hasUsedFreePlan = Boolean(usedFreeSubscription);
 
     let existingSubscriptionPackages = await prisma.subscription.findMany({
       where: {
@@ -681,12 +832,13 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
         numberOfResumeAccess: true,
         jobDaysActive: true,
         expireDaysPackage: true,
+        isFree: true,
         isDelete : true
       },
-      orderBy : {
-        discountedPrice : "asc"
-      }
     });
+    existingSubscriptionPackages = sortSubscriptionsByPayableAmount(
+      existingSubscriptionPackages
+    );
     let lowestPrice = null
     if(purchasedSubscriptions.length > 0){
       // const purchasedPrices = existingSubscriptionPackages.filter(pkg => purchasedSubscriptionIds.includes(pkg.id)).map(pkg => pkg.discountedPrice)
@@ -698,7 +850,7 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
           purchasedSubscriptionIds.includes(pkg.id) &&
           pkg.isDelete === false // 👈 ignore deleted
       )
-      .map((pkg) => pkg.discountedPrice);
+      .map((pkg) => getPayableAmount(pkg));
   
     if (purchasedPrices.length > 0) {
       lowestPrice = Math.min(...purchasedPrices);
@@ -740,10 +892,11 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
     existingSubscriptionPackages = existingSubscriptionPackages.map(
       ({ isDelete, ...subscription }) => {
         const isPurchased = purchasedSubscriptionIds.includes(subscription.id);
+        const payableAmount = getPayableAmount(subscription);
         const isUpgrade =
-          lowestPrice !== null && subscription.discountedPrice > lowestPrice;
+          lowestPrice !== null && payableAmount > lowestPrice;
         const isLowerPlan =
-          lowestPrice !== null && subscription.discountedPrice < lowestPrice;
+          lowestPrice !== null && payableAmount < lowestPrice;
     
         let buttonText = "Buy Now";
         let isDisabled = false;
@@ -751,6 +904,10 @@ exports.getSubscriptionPackagesForCompany = async (req, res) => {
         // 🚫 deleted plans (handled internally)
         if (isDelete) {
           buttonText = "Plan Unavailable";
+          isDisabled = true;
+        }
+        else if (subscription.isFree && hasUsedFreePlan && !isPurchased) {
+          buttonText = "Free Plan Expired";
           isDisabled = true;
         }
         // ✅ active logic
