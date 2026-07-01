@@ -9,13 +9,29 @@ exports.createPlan = (data) => {
 exports.getActivePlans = () => {
   return prisma.internSubscriptionPlan.findMany({
     where: { isDelete: false },
-    orderBy: { discountedPrice: "asc" },
+    orderBy: [{ isFreePlan: "desc" }, { discountedPrice: "asc" }],
   });
 };
 
 exports.getAllPlansForAdmin = () => {
   return prisma.internSubscriptionPlan.findMany({
     orderBy: { createdAt: "desc" },
+  });
+};
+
+exports.countActivePlans = () => {
+  return prisma.internSubscriptionPlan.count({
+    where: { isDelete: false },
+  });
+};
+
+exports.countActiveFreePlans = (excludeId) => {
+  return prisma.internSubscriptionPlan.count({
+    where: {
+      isDelete: false,
+      isFreePlan: true,
+      ...(excludeId && { id: { not: excludeId } }),
+    },
   });
 };
 
@@ -27,11 +43,8 @@ exports.updatePlan = (id, data) => {
   return prisma.internSubscriptionPlan.update({ where: { id }, data });
 };
 
-exports.softDeletePlan = (id) => {
-  return prisma.internSubscriptionPlan.update({
-    where: { id },
-    data: { isDelete: true },
-  });
+exports.deletePlan = (id) => {
+  return prisma.internSubscriptionPlan.delete({ where: { id } });
 };
 
 // ─── Subscriptions ───────────────────────────────────────────────────────────
@@ -62,5 +75,24 @@ exports.decrementCredit = (id) => {
   return prisma.internSubscription.update({
     where: { id },
     data: { interviewCreditsRemaining: { decrement: 1 } },
+  });
+};
+
+exports.addCredits = (id, credits) => {
+  return prisma.internSubscription.update({
+    where: { id },
+    data: {
+      interviewCreditsTotal: { increment: credits },
+      interviewCreditsRemaining: { increment: credits },
+    },
+  });
+};
+
+exports.hasUsedFreePlan = (internId) => {
+  return prisma.internSubscription.findFirst({
+    where: {
+      internId,
+      plan: { isFreePlan: true },
+    },
   });
 };

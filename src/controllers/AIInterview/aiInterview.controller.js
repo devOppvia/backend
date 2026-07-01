@@ -14,6 +14,23 @@ const QUESTION_ROTATION = [
   "BEHAVIORAL", "TECHNICAL", "CLOSING",
 ];
 
+const VALID_INTERVIEW_CATEGORIES = [
+  "BEHAVIORAL",
+  "TECHNICAL",
+  "CASE_STUDY",
+  "SYSTEM_DESIGN",
+  "CODING_DSA",
+  "HR_CULTURE_FIT",
+  "PROJECT_DEEP_DIVE",
+  "RESUME_BASED",
+  "DEBUGGING",
+  "MIXED",
+];
+
+const MIXED_CATEGORY_ROTATION = VALID_INTERVIEW_CATEGORIES.filter(
+  (category) => category !== "MIXED",
+);
+
 const getQuestionCount = (durationMins) => {
   if (durationMins == 15) return 4;
   if (durationMins == 30) return 18;
@@ -22,7 +39,23 @@ const getQuestionCount = (durationMins) => {
   return 5  ;
 };
 
-const getQuestionType = (questionNumber, interviewCategory) => {
+const normalizeInterviewCategories = (value) => {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((item) => String(item).toUpperCase()))];
+};
+
+const getQuestionType = (questionNumber, interviewCategory, interviewCategories = []) => {
+  const categories = normalizeInterviewCategories(interviewCategories);
+
+  if (categories.includes("MIXED")) {
+    return MIXED_CATEGORY_ROTATION[(questionNumber - 1) % MIXED_CATEGORY_ROTATION.length] || "BEHAVIORAL";
+  }
+
+  if (categories.length > 1) {
+    return categories[(questionNumber - 1) % categories.length] || "BEHAVIORAL";
+  }
+
+  if (categories.length === 1) return categories[0];
   if (interviewCategory !== "MIXED") return interviewCategory;
   return QUESTION_ROTATION[(questionNumber - 1) % QUESTION_ROTATION.length] || "BEHAVIORAL";
 };
@@ -129,6 +162,7 @@ exports.createInterview = async (req, res) => {
       type,
       interviewerPreference,
       interviewCategory,
+      interviewCategories,
       identityVerification,
       duration,
       jobDescription,
@@ -142,7 +176,48 @@ exports.createInterview = async (req, res) => {
       return errorResponse(res, "Invalid interview type", 400);
     if (!duration) return errorResponse(res, "Duration is required", 400);
     if (!resumeSnapshot) return errorResponse(res, "Resume snapshot is required", 400);
-    if (!interviewCategory) return errorResponse(res, "Interview category is required", 400);
+    const selectedCategories = normalizeInterviewCategories(
+      interviewCategories || interviewCategory,
+    );
+
+    if (!selectedCategories.length) {
+      return errorResponse(res, "Interview category is required", 400);
+    }
+
+    const invalidCategory = selectedCategories.find(
+      (category) => !VALID_INTERVIEW_CATEGORIES.includes(category),
+    );
+    if (invalidCategory) return errorResponse(res, "Invalid interview category", 400);
+
+    const subscription = await internSubscriptionService.getActiveSubscription(internId);
+    if (!subscription) return errorResponse(res, "No active subscription", 403);
+
+    const allowedInterviewModes = subscription.plan?.interviewMode || [];
+    if (!allowedInterviewModes.includes(type)) {
+      return errorResponse(
+        res,
+        `${type === "COMPANY" ? "Company" : "Practice"} interview is not available in your active plan`,
+        400,
+      );
+    }
+
+    const typeLimit = subscription.plan?.interviewType || 1;
+    if (selectedCategories.length > typeLimit) {
+      return errorResponse(
+        res,
+        `You can select up to ${typeLimit} interview types with your active plan`,
+        400,
+      );
+    }
+
+    if (selectedCategories.includes("MIXED") && typeLimit < 9) {
+      return errorResponse(
+        res,
+        "Mixed interview type is not available in your active plan",
+        400,
+      );
+    }
+
     if (type === "COMPANY" && !jobDescription)
       return errorResponse(res, "Job description is required for COMPANY interviews", 400);
 
@@ -162,7 +237,8 @@ exports.createInterview = async (req, res) => {
         internId,
         type,
         interviewerPreference: interviewerPreference || "MALE",
-        interviewCategory: interviewCategory || "MIXED",
+        interviewCategory: selectedCategories[0] || "MIXED",
+        interviewCategories: selectedCategories,
         identityVerification: identityVerification || false,
         duration,
         jobDescription: jobDescription || null,
@@ -212,6 +288,7 @@ exports.startInterview = async (req, res) => {
         interviewId: id,
         totalQuestions: interview.totalQuestions,
         interviewCategory: interview.interviewCategory,
+        interviewCategories: interview.interviewCategories,
         voice: interview.voiceUsed,
       },
       "Interview started",
@@ -344,7 +421,11 @@ exports.getNextQuestion = async (req, res) => {
       return successResponse(res, { isComplete: true }, "Time limit reached", 200);
     }
 
-    const questionType = getQuestionType(questionNumber, interview.interviewCategory);
+    const questionType = getQuestionType(
+      questionNumber,
+      interview.interviewCategory,
+      interview.interviewCategories,
+    );
 
     const previousQuestions = existingQuestions.map((q) => ({
       question: q.questionText,

@@ -26,6 +26,7 @@ exports.getInterviewHistory = (internId) => {
       id: true,
       type: true,
       interviewCategory: true,
+      interviewCategories: true,
       duration: true,
       status: true,
       overallScore: true,

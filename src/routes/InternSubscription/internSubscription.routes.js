@@ -10,6 +10,7 @@ router.get("/plans", internSubscriptionController.getActivePlans);
 // ── Intern (authenticated) ────────────────────────────────────────────────────
 router.post("/create-order", authMiddleware, internSubscriptionController.createOrder);
 router.post("/verify-payment", authMiddleware, internSubscriptionController.verifyPayment);
+router.post("/activate-free-plan", authMiddleware, internSubscriptionController.activateFreePlan);
 router.get("/my", authMiddleware, internSubscriptionController.getMySubscription);
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

@@ -784,6 +784,18 @@ enum AIInterviewCategory {
   MIXED
 }
 
+enum AIInterviewDuration {
+  MIN_15
+  MIN_30
+  MIN_45
+  MIN_60
+}
+
+enum IdentityVerificationOption {
+  ENABLE
+  DISABLE
+}
+
 enum ExpressionEmotion {
   CONFIDENT
   NERVOUS
@@ -793,18 +805,24 @@ enum ExpressionEmotion {
 }
 
 model InternSubscriptionPlan {
-  id               String   @id @unique @default(uuid())
-  planName         String
-  description      String
-  price            Int
-  discountedPrice  Int
-  interviewCredits Int // how many AI interviews this plan gives
-  duration         Int // plan validity in days
-  features         Json
-  isPopular        Boolean  @default(false)
-  isDelete         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                   String                       @id @unique @default(uuid())
+  planName             String
+  description          String
+  price                Int
+  discountedPrice      Int
+  isFreePlan           Boolean                      @default(false)
+  isDiscount           Boolean                      @default(false)
+  interviewCredits     Int // how many AI interviews this plan gives
+  duration             Int // plan validity in days
+  interviewDuration    AIInterviewDuration[]        @default([])
+  interviewMode        AIInterviewType[]            @default([COMPANY, PRACTICE])
+  interviewType        Int                          @default(1)
+  identityVerification IdentityVerificationOption[] @default([])
+  features             Json
+  isPopular            Boolean                      @default(false)
+  isDelete             Boolean                      @default(false)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
 
   internSubscriptions InternSubscription[]
 
@@ -840,6 +858,7 @@ model AIInterview {
   type                  AIInterviewType
   interviewerPreference AIInterviewerPreference @default(MALE)
   interviewCategory     AIInterviewCategory     @default(MIXED)
+  interviewCategories   AIInterviewCategory[]   @default([])
   identityVerification  Boolean                 @default(false)
   duration              Int // planned duration in mins
   jobDescription        String? // only for COMPANY type

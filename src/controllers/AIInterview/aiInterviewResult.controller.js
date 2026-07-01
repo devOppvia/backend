@@ -57,6 +57,7 @@ exports.getResult = async (req, res) => {
       id: interview.id,
       type: interview.type,
       interviewCategory: interview.interviewCategory,
+      interviewCategories: interview.interviewCategories,
       duration: interview.duration,
       durationActual: interview.durationActual,
       overallScore: interview.overallScore,
