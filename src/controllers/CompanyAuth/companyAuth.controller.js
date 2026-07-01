@@ -232,9 +232,8 @@ exports.companyRegistrationStep2 = async (req, res) => {
     if (!allowedTypes.includes(logo[0].mimetype)) {
       return errorResponse(res, "Logo must be a JPG or PNG image", 400);
     }
-      console.log("document?.[0]?.mimetype) : ",document?.[0]?.mimetype)
-    if (!allowedDocumentType.includes(document?.[0]?.mimetype)) {
-      return errorResponse(res, "Verification Document JPG or PNG image", 400);
+    if (document && !allowedDocumentType.includes(document?.[0]?.mimetype)) {
+      return errorResponse(res, "Verification document file type is invalid", 400);
     }
     if (!industryType || validator.isEmpty(industryType.trim())) {
       return errorResponse(res, "Industry type is required", 400);
@@ -288,42 +287,44 @@ exports.companyRegistrationStep2 = async (req, res) => {
       );
     }
 
-    if (!panOrGst || validator.isEmpty(panOrGst.trim())) {
-      return errorResponse(res, "PAN or GST number is required", 400);
-    }
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     const gstRegex =
       /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     if (
+      panOrGst &&
+      !validator.isEmpty(panOrGst.trim()) &&
       !(
-        panRegex.test(panOrGst.toUpperCase()) ||
-        gstRegex.test(panOrGst.toUpperCase())
+        panRegex.test(panOrGst.trim().toUpperCase()) ||
+        gstRegex.test(panOrGst.trim().toUpperCase())
       )
     ) {
       return errorResponse(res, "PAN or GST number format is invalid", 400);
     }
-     if (!document) {
-      return errorResponse(res, "Verification Document is required", 400);
-    }
-      if(!documentType) {
+    if (document && !documentType) {
        return errorResponse(res, "Document type is required", 400);
     }
     let existingCompany = await companyAuthServices.fetchCompanyById(id);
     if (!existingCompany) {
       return errorResponse(res, "Company not found", 400);
     }
+    const logoFilename = logo?.[0]?.filename;
+    const documentFilename = document?.[0]?.filename || null;
+    const normalizedPanOrGst = panOrGst?.trim()
+      ? panOrGst.trim().toUpperCase()
+      : null;
+
     let response = await companyAuthServices.companyRegistrationStep2(
       id,
-      (logo = logo?.[0].filename),
-      (smallLogo = logo?.[0].filename),
+      logoFilename,
+      logoFilename,
       industryType,
       companySize,
       companyIntro,
       foundedYear,
-      panOrGst,
+      normalizedPanOrGst,
       websiteUrl,
-      documentType,
-      (document = document?.[0].filename)
+      documentFilename ? documentType : null,
+      documentFilename
     );
     return successResponse(
       res,

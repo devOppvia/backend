@@ -134,7 +134,7 @@ if(jobType !== "REMOTE") {
       return errorResponse(res, "Job type is required", 400);
     }
     if (jobType) {
-      let validType = ["REMOTE", "HYBRID", "OFFICE"];
+      let validType = ["REMOTE", "HYBRID", "OFFICE", "ANY"];
       if (!validType.includes(jobType)) {
         return errorResponse(res, "Please enter job type");
       }
@@ -738,7 +738,7 @@ exports.updateJobDetails = async (req, res) => {
       return errorResponse(res, "Job type is required");
     }
     if (jobType) {
-      let validType = ["REMOTE", "HYBRID", "OFFICE"];
+      let validType = ["REMOTE", "HYBRID", "OFFICE", "ANY"];
       if (!validType.includes(jobType)) {
         return errorResponse(res, "Please enter job type");
       }

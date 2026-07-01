@@ -34,12 +34,14 @@ enum InternshipType {
   REMOTE
   OFFICE
   HYBRID
+  ANY
 }
 
 enum JobType {
   REMOTE
   HYBRID
   OFFICE
+  ANY
 }
 
 enum ApplicationType {
@@ -225,6 +227,7 @@ model Company {
   websiteUrl            String?
   rejectReason          String?
   AiScore               Int                     @default(0)
+  AiScored              Boolean                 @default(false)
   forgotPasswordAttemts Int                     @default(0)
   isProfileCompleted    Boolean                 @default(false)
   companyStatus         CompanyStatus           @default(PENDING)
@@ -369,7 +372,7 @@ model Job {
   additionalBenefits   Json
   rejectReason         String?
   jobActiveDate        DateTime?
-  jobExpireDate        DateTime?  
+  jobExpireDate        DateTime?
   jobDaysActive        Int?
   experience           String?
   numberOfApplications Int?                  @default(0)

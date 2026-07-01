@@ -119,11 +119,16 @@ exports.getRegisteredCompaniesBasedOnStatus = async (req, res) => {
           countryCode: true,
           phoneNumber: true,
 
-          // ✅ FIX HERE
           industryType: true,
-         AiScore:true,
+          companyIndustry: {
+            select: {
+              id: true,
+              categoryName: true,
+            },
+          },
+          AiScore:true,
           companySize: true,
-          companyIntro: true,
+          companyIntro: true, 
           foundedYear: true,
           panOrGst: true,
           country: true,
@@ -142,26 +147,17 @@ exports.getRegisteredCompaniesBasedOnStatus = async (req, res) => {
           isProfileCompleted: true,
           createdAt: true,
           updatedAt: true,
+          documentType : true,
+          document    : true,
+          AiScored  : true
         },
       });
-      const industryIds = companies.map(c => c?.industryType ? c.industryType : "");
-
-const industries = await prisma.jobCategory.findMany({
-  where: {
-    id: { in: industryIds },
-  },
-});
-
-const industryMap = {};
-
-industries.forEach(ind => {
-  industryMap[ind.id] = ind.categoryName;
-});
-
- companies = companies.map(company => ({
-  ...company,
-  industryName: industryMap[company.industryType] || null,
-}));
+      companies = companies.map(({ companyIndustry, ...company }) => ({
+        ...company,
+        industryTypeId: company.industryType,
+        industryType: companyIndustry,
+        industryName: companyIndustry?.categoryName || null,
+      }));
     }
     return successResponse(
       res,

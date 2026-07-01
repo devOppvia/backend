@@ -61,6 +61,7 @@ exports.getInterviewStats = async (internId) => {
     }),
   ]);
 
+  const totalAIInterviewQuestion = await prisma.aIInterviewQuestion.count()
   const interviewsDone = interviews.length;
   let avgScore = 0;
   let avgDuration = 0;
@@ -95,6 +96,7 @@ exports.getInterviewStats = async (internId) => {
     userRating,
     interviewTotalCredit: activeSubscription?.interviewCreditsTotal || 0,
     interviewRemainsCredit: activeSubscription?.interviewCreditsRemaining || 0,
+    totalAIInterviewQuestion : totalAIInterviewQuestion ?? 0
   };
 };
 

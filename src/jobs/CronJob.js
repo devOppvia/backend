@@ -139,6 +139,7 @@ async function generateCompanyScore() {
           },
           data: {
             AiScore: Number(score),
+            AiScored : true
           },
         });
       }

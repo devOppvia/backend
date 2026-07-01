@@ -228,7 +228,7 @@ exports.getInternships = async (req, res) => {
     }
     
     if (internShipType.length > 0) {
-      const validInternShipType = ["REMOTE", "OFFICE", "HYBRID"];
+      const validInternShipType = ["REMOTE", "OFFICE", "HYBRID", "ANY"];
 
       const isValid = internShipType.every((type) =>
         validInternShipType.includes(type)

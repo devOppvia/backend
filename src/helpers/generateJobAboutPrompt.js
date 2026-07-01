@@ -411,7 +411,7 @@ function generateCompanyEvaluationPrompt(companyData) {
     
     Evaluation Criteria:
     - Profile completeness and data quality
-    - Business legitimacy (valid PAN/GST, website, social presence)
+    - Business legitimacy (valid PAN/GST if provided, website, social presence)
     - Contact information validity (email domain, phone format)
     - Company information consistency
     - Professional presentation (logo, description)
@@ -459,7 +459,7 @@ function generateCompanyEvaluationPrompt(companyData) {
     Profile Completed: ${isProfileCompleted ? "Yes" : "No"}
     
     Note: Consider the following as red flags (lower score):
-    - Missing critical fields (company name, email, PAN/GST)
+    - Missing critical fields (company name, email)
     - Invalid/suspicious email domains (e.g., generic gmail, temporary emails)
     - No website or social media presence
     - Incomplete profile

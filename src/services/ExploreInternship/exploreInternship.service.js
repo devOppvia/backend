@@ -62,7 +62,7 @@ exports.getExploreInternshipFilter = async (data) => {
       skillName: true,
     },
   });
-  let typeOfInternship = ["REMOTE", "HYBRID", "OFFICE"];
+  let typeOfInternship = ["REMOTE", "HYBRID", "OFFICE", "ANY"];
   let typeOfEmployment = ["FULL_TIME", "PART_TIME" , "CONTRACT" , "ANY" ];
 
     

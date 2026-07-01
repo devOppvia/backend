@@ -7,6 +7,15 @@ const {
 const jwt = require("jsonwebtoken");
 const { generateOTP } = require("../../helpers/generateOTP");
 const sendWhatsAppOTP = require("../../helpers/sendsma");
+
+const normalizeProfileUrl = (value, prefix) => {
+  if (!value || typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `${prefix}${trimmed}`;
+};
+
 exports.InternRegistrationSendOtp = async (req, res) => {
   try {
     let { mobileNumber, countryCode } = req.body || {};
@@ -213,6 +222,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
         countryCode: checkUserInDb.countryCode,
         mobileNumber: checkUserInDb.mobileNumber,
         applicationType: checkUserInDb.applicationType,
+        isOpenToWork : checkUserInDb?.isOpenToWork
       }
     }
     // await prisma.interns.update({
@@ -383,7 +393,7 @@ exports.internRegistration = async (req, res) => {
       return errorResponse(res, "Internship type is required", 400);
     }
     if (
-      !["REMOTE", "OFFICE", "HYBRID"].includes(internshipType.toUpperCase())
+      !["REMOTE", "OFFICE", "HYBRID", "ANY"].includes(internshipType.toUpperCase())
     ) {
       return errorResponse(res, "Invalid internship type", 400);
     }
@@ -420,18 +430,22 @@ exports.internRegistration = async (req, res) => {
 
 
 
-   
+    if (!preferredLocations) {
+      preferredLocations = [];
+    }
     if (!Array.isArray(preferredLocations)) {
-      preferredLocations = {  connect:[preferredLocations]};
+      preferredLocations = [preferredLocations];
     }
-    preferredLocations = {
-      connect : preferredLocations.map((s) => {
-      if(s.id || s.tag){
-        return {id : s.id || s.tag}
-      }
-      return s.name
-    })
-    }
+    preferredLocations = preferredLocations.length
+      ? {
+          connect: preferredLocations.map((s) => {
+            if (s.id || s.tag) {
+              return { id: s.id || s.tag };
+            }
+            return { id: s.name || s };
+          }),
+        }
+      : undefined;
     
         if (!skills) {
       return errorResponse(res, "Skills is required", 400);
@@ -451,24 +465,22 @@ exports.internRegistration = async (req, res) => {
       return errorResponse(res, "Skills is required", 400);
     }
 
-
-      if (!preferredStates) {
-      return errorResponse(res, "Skills is required", 400);
+    if (!preferredStates) {
+      preferredStates = [];
     }
     if (!Array.isArray(preferredStates)) {
-      preferredStates = {  connect:[preferredStates]};
+      preferredStates = [preferredStates];
     }
-    preferredStates = {
-      connect : preferredStates.map((s) => {
-      if(s.id || s.tag){
-        return {id : s.id || s.tag}
-      }
-      return s.name
-    })
-    }
-    if (preferredStates.length === 0) {
-      return errorResponse(res, "Preferred states is required", 400);
-    }
+    preferredStates = preferredStates.length
+      ? {
+          connect: preferredStates.map((s) => {
+            if (s.id || s.tag) {
+              return { id: s.id || s.tag };
+            }
+            return { id: s.name || s };
+          }),
+        }
+      : undefined;
 
   
     if (projectLinks && !Array.isArray(projectLinks)) {
@@ -488,6 +500,10 @@ exports.internRegistration = async (req, res) => {
         iso2 : country
       }
     })
+
+    linkedin = normalizeProfileUrl(linkedin, "https://www.linkedin.com/in/");
+    github = normalizeProfileUrl(github, "https://github.com/");
+    portfolio = normalizeProfileUrl(portfolio, "https://");
 
     let checkUser = await prisma.interns.create({
       data: {
@@ -522,7 +538,8 @@ exports.internRegistration = async (req, res) => {
         preferredLocation:  preferredLocations,
         preferredStates,
         preferredAll : preferredAll === "true",
-        employmentType : employmentType.toUpperCase()
+        employmentType : employmentType.toUpperCase(),
+        
       },
     });
 
@@ -561,6 +578,7 @@ exports.internRegistration = async (req, res) => {
         countryCode: checkUser.countryCode,
         mobileNumber: checkUser.mobileNumber,
         applicationType: checkUser.applicationType,
+        isOpenToWork : checkUser?.isOpenToWork
       }
 
     return successResponse(res, {accessToken : token, refreshToken , internData}, "Intern registered successfully", {}, 200);
