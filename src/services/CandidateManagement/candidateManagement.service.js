@@ -270,7 +270,12 @@ exports.getCandidateDetailsForCompanyViewDetails = async (id) => {
       // profileLinks: true,
       fullName: true,
       personalDetails : true,
-      projectLink : true
+      projectLink : true,
+      experiences : true,
+      experience : true,
+      linkedin : true,
+      github :  true,
+      portfolio : true,
       // internAbout: true,
     },
   });

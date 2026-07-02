@@ -9,9 +9,18 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-const INTERVIEW_DURATIONS = ["MIN_15", "MIN_30", "MIN_45", "MIN_60"];
+const INTERVIEW_DURATIONS = ["MIN_3", "MIN_15", "MIN_30", "MIN_45", "MIN_60"];
 const INTERVIEW_MODES = ["COMPANY", "PRACTICE"];
 const IDENTITY_VERIFICATION_OPTIONS = ["ENABLE", "DISABLE"];
+
+const getAuthenticatedIntern = async (internId) => {
+  if (!internId) return null;
+
+  return prisma.interns.findUnique({
+    where: { id: internId },
+    select: { id: true },
+  });
+};
 
 const normalizeArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -282,12 +291,39 @@ exports.getActivePlans = async (req, res) => {
   }
 };
 
+exports.getFreePlanStatus = async (req, res) => {
+  try {
+    const internId = req.user.id;
+    const intern = await getAuthenticatedIntern(internId);
+    if (!intern) {
+      return errorResponse(res, "Intern account not found. Please login again.", 401);
+    }
+
+    const usedFreePlan = await internSubscriptionService.hasUsedFreePlan(internId);
+
+    return successResponse(
+      res,
+      { hasUsedFreePlan: Boolean(usedFreePlan) },
+      "Free plan status fetched successfully",
+      200,
+    );
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
 // ─── Intern: Purchase Flow ───────────────────────────────────────────────────
 
 exports.createOrder = async (req, res) => {
   try {
     const internId = req.user.id;
     const { planId } = req.body || {};
+
+    const intern = await getAuthenticatedIntern(internId);
+    if (!intern) {
+      return errorResponse(res, "Intern account not found. Please login again.", 401);
+    }
 
     if (!planId) return errorResponse(res, "Plan id is required", 400);
 
@@ -335,6 +371,11 @@ exports.verifyPayment = async (req, res) => {
     const internId = req.user.id;
     const { planId, razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body || {};
+
+    const intern = await getAuthenticatedIntern(internId);
+    if (!intern) {
+      return errorResponse(res, "Intern account not found. Please login again.", 401);
+    }
 
     if (!planId) return errorResponse(res, "Plan id is required", 400);
     if (!razorpay_order_id) return errorResponse(res, "Razorpay order id is required", 400);
@@ -408,6 +449,11 @@ exports.activateFreePlan = async (req, res) => {
     const internId = req.user.id;
     const { planId } = req.body || {};
 
+    const intern = await getAuthenticatedIntern(internId);
+    if (!intern) {
+      return errorResponse(res, "Intern account not found. Please login again.", 401);
+    }
+
     if (!planId) return errorResponse(res, "Plan id is required", 400);
 
     const plan = await internSubscriptionService.getPlanById(planId);
@@ -459,6 +505,11 @@ exports.activateFreePlan = async (req, res) => {
 exports.getMySubscription = async (req, res) => {
   try {
     const internId = req.user.id;
+    const intern = await getAuthenticatedIntern(internId);
+    if (!intern) {
+      return errorResponse(res, "Intern account not found. Please login again.", 401);
+    }
+
     const subscription = await internSubscriptionService.getActiveSubscription(internId);
 
     if (!subscription) {

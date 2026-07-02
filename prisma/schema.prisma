@@ -107,6 +107,7 @@ model Interns {
   emailOtpVerifyBlockedUntil DateTime?
   applicationType            ApplicationType       @default(INTERNSHIP)
   experience                 String?
+  experiences                Json?
   internStatus               InternStatus          @default(PENDING)
   candidate                  CandidateManagement[]
   downloadedResumes          DownloadedResumes[]
@@ -188,29 +189,38 @@ model Company {
   documentType String?
   document     String?
 
-  designation           String
-  hrAndRecruiterName    String
-  countryCode           String
-  phoneNumber           String    @unique
-  password              String
-  fcmToken              String?
-  emailOtp              String?
-  isEmailVerified       Boolean   @default(false)
-  emailOtpExpiry        DateTime?
-  emailOtpAttempts      Int       @default(0)
-  emailOtpBlockedUntil  DateTime?
-  mobileOtp             String?
-  isMobileVerified      Boolean   @default(false)
-  mobileOtpExpiry       DateTime?
-  mobileOtpAttempts     Int       @default(0)
-  mobileOtpBlockedUntil DateTime?
-  logo                  String?
-  smallLogo             String?
-  industryType          String?
-  companySize           String?
-  companyIntro          String?
-  foundedYear           String?
-  panOrGst              String?
+  designation               String
+  hrAndRecruiterName        String
+  countryCode               String
+  phoneNumber               String    @unique
+  password                  String
+  fcmToken                  String?
+  emailOtp                  String?
+  isEmailVerified           Boolean   @default(false)
+  emailOtpExpiry            DateTime?
+  emailOtpAttempts          Int       @default(0)
+  emailOtpBlockedUntil      DateTime?
+  mobileOtp                 String?
+  isMobileVerified          Boolean   @default(false)
+  mobileOtpExpiry           DateTime?
+  mobileOtpAttempts         Int       @default(0)
+  mobileOtpBlockedUntil     DateTime?
+  twoFactorEnabled          Boolean   @default(false)
+  twoFactorEmailEnabled     Boolean   @default(false)
+  twoFactorMobileEnabled    Boolean   @default(false)
+  twoFactorEmailOtp         String?
+  twoFactorEmailOtpExpiry   DateTime?
+  twoFactorMobileOtp        String?
+  twoFactorMobileOtpExpiry  DateTime?
+  twoFactorLoginToken       String?
+  twoFactorLoginTokenExpiry DateTime?
+  logo                      String?
+  smallLogo                 String?
+  industryType              String?
+  companySize               String?
+  companyIntro              String?
+  foundedYear               String?
+  panOrGst                  String?
 
   country        String?
   state          String?
@@ -270,6 +280,7 @@ model CompanyUpdateRequests {
   city               String?
   zipCode            String?
   address            String?
+  officeNumber       String?
   branchLocation     String[] // ARRAY field same as company table
   linkdinUrl         String?
   instagramUrl       String?
@@ -785,6 +796,7 @@ enum AIInterviewCategory {
 }
 
 enum AIInterviewDuration {
+  MIN_3
   MIN_15
   MIN_30
   MIN_45

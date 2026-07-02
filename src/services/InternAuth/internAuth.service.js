@@ -295,6 +295,8 @@ exports.getInternJobProfileDetailsBasedOnId = async (internId) => {
       github : true,
       projectLink :  true,
       employmentType : true,
+      experience: true,
+      experiences: true,
       
       // cgpaOrPercentage: true,
       internshipType: true,

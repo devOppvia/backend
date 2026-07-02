@@ -32,6 +32,7 @@ const MIXED_CATEGORY_ROTATION = VALID_INTERVIEW_CATEGORIES.filter(
 );
 
 const getQuestionCount = (durationMins) => {
+  if (durationMins == 3) return 1;
   if (durationMins == 15) return 4;
   if (durationMins == 30) return 18;
   if (durationMins == 45) return 26;

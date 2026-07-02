@@ -136,6 +136,7 @@ exports.getRegisteredCompaniesBasedOnStatus = async (req, res) => {
           city: true,
           zipCode: true,
           address: true,
+          officeNumber: true,
           branchLocation: true,
           linkdinUrl: true,
           instagramUrl: true,
@@ -253,6 +254,7 @@ exports.changeCompanyStatus = async (req, res) => {
           city: pendingUpdateRequest.city,
           zipCode: pendingUpdateRequest.zipCode,
           address: pendingUpdateRequest.address,
+          officeNumber: pendingUpdateRequest.officeNumber,
           branchLocation: pendingUpdateRequest.branchLocation,
           linkdinUrl: pendingUpdateRequest.linkdinUrl,
           instagramUrl: pendingUpdateRequest.instagramUrl,
@@ -304,6 +306,7 @@ exports.changeCompanyStatus = async (req, res) => {
           city: pendingUpdateRequest.city,
           zipCode: pendingUpdateRequest.zipCode,
           address: pendingUpdateRequest.address,
+          officeNumber: pendingUpdateRequest.officeNumber,
           branchLocation: pendingUpdateRequest.branchLocation,
 
           linkdinUrl: pendingUpdateRequest.linkdinUrl,
@@ -610,11 +613,11 @@ exports.companyRegistrationStep4 = async (req, res) => {
     if (!linkedinUrl) {
       return errorResponse(res, "Linkdin url is required", 400);
     }
-    if (!instagramUrl) {
-      return errorResponse(res, "Instagram Url is required", 400);
+    if (instagramUrl?.trim() && !validator.isURL(instagramUrl.trim())) {
+      return errorResponse(res, "Invalid Instagram URL", 400);
     }
-    if (!youtubeUrl) {
-      return errorResponse(res, "Youtube url is required", 400);
+    if (youtubeUrl?.trim() && !validator.isURL(youtubeUrl.trim())) {
+      return errorResponse(res, "Invalid Youtube URL", 400);
     }
     await companyManagementServices.companyRegistrationStep4(draftId, {
       linkedinUrl,
@@ -679,6 +682,7 @@ exports.updateCompanyProfile = async (req, res) => {
       city,
       zipCode,
       address,
+      officeNumber,
       branchLocation,
       linkdinUrl,
       instagramUrl,
@@ -695,8 +699,20 @@ exports.updateCompanyProfile = async (req, res) => {
     if (!companySize) {
       return errorResponse(res, "Company size is required", 400);
     }
-    if (!validator.isInt(companySize.toString(), { min: 1, max: 100000 })) {
-      return errorResponse(res, "Company size must be a valid number", 400);
+    const companySizeOptions = [
+      "1-10",
+      "11-25",
+      "26-50",
+      "51-100",
+      "101-250",
+      "251-500",
+      "501-1000",
+      "1001-5000",
+      "5001-10000",
+      "10000+",
+    ];
+    if (!companySizeOptions.includes(companySize)) {
+      return errorResponse(res, "Company size range is invalid", 400);
     }
     if (!companyName) {
       return errorResponse(res, "Company name is required", 400);
@@ -769,22 +785,22 @@ exports.updateCompanyProfile = async (req, res) => {
     if (!validator.isLength(address, { min: 5, max: 200 })) {
       return errorResponse(res, "Address must be 5–200 characters", 400);
     }
-    if (!companyIntro) {
-      return errorResponse(res, "Company intro is required", 400);
+    if (!officeNumber) {
+      return errorResponse(res, "Office number is required", 400);
     }
-    if (!validator.isLength(companyIntro, { min: 10, max: 500 })) {
+    if (!/^[a-zA-Z0-9\s#.,/-]{1,50}$/.test(officeNumber)) {
+      return errorResponse(res, "Office number is invalid", 400);
+    }
+    if (
+      companyIntro &&
+      !validator.isLength(companyIntro, { min: 10, max: 500 })
+    ) {
       return errorResponse(res, "Company intro must be 10–500 characters", 400);
     }
-    if (!instagramUrl) {
-      return errorResponse(res, "Instagram url is required", 400);
-    }
-    if (!validator.isURL(instagramUrl)) {
+    if (instagramUrl?.trim() && !validator.isURL(instagramUrl.trim())) {
       return errorResponse(res, "Invalid Instagram URL", 400);
     }
-    if (!youtubeUrl) {
-      return errorResponse(res, "Youtube url is required", 400);
-    }
-    if (!validator.isURL(youtubeUrl)) {
+    if (youtubeUrl?.trim() && !validator.isURL(youtubeUrl.trim())) {
       return errorResponse(res, "Invalid Youtube URL", 400);
     }
     if (!linkdinUrl) {

@@ -402,6 +402,8 @@ exports.getCompanyCreditsAndStats = async (companyId) => {
     totalInterviews,
     totalHired,
     totalJobsPosted,
+    quotaUsedJobs,
+    companyJobs,
     totalDownloadedResumes,
     activeSubscription
   ] = await Promise.all([
@@ -414,6 +416,20 @@ exports.getCompanyCreditsAndStats = async (companyId) => {
     prisma.job.count({
       where: { companyId: companyId, isDelete: false }
     }),
+    prisma.job.count({
+      where: {
+        companyId: companyId,
+        isDelete: false,
+        jobStatus: { in: ["REVIEW", "APPROVED", "COMPLETED", "PAUSED"] },
+      },
+    }),
+    prisma.job.findMany({
+      where: { companyId: companyId, isDelete: false },
+      select: {
+        numberOfApplications: true,
+        appliedCandidates: true,
+      },
+    }),
     prisma.downloadedResumes.count({
       where: { companyId: companyId }
     }),
@@ -423,12 +439,27 @@ exports.getCompanyCreditsAndStats = async (companyId) => {
     })
   ]);
 
+  const fallbackApplicationLimit = activeSubscription?.numberOfApplications || 0;
+  const applicationLimitTotal = companyJobs.reduce((total, job) => {
+    const jobLimit = job.numberOfApplications || fallbackApplicationLimit;
+    return total + jobLimit;
+  }, 0);
+  const applicationsReceived = companyJobs.reduce(
+    (total, job) => total + (job.appliedCandidates || 0),
+    0,
+  );
+
   return {
     totalInterviews,
     totalHired,
     totalJobsPosted,
+    jobQuotaUsed: quotaUsedJobs,
+    jobQuotaTotal:
+      quotaUsedJobs + (activeSubscription ? activeSubscription.jobPostingCredits : 0),
     remainingJobCredits: activeSubscription ? activeSubscription.jobPostingCredits : 0,
     totalDownloadedResumes,
+    applicationsReceived,
+    applicationLimitTotal,
     remainingApplications: activeSubscription ? activeSubscription.numberOfApplications : 0,
   };
 };

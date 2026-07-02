@@ -1,0 +1,1 @@
+ALTER TYPE "AIInterviewDuration" ADD VALUE IF NOT EXISTS 'MIN_3';

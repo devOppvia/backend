@@ -383,7 +383,8 @@ exports.updateJobStatus = async (
   jobActiveDate,
   jobExpireDate,
   jobDaysActive,
-  subscriptionPlanId
+  subscriptionPlanId,
+  applicationLimitForJob
 ) => {
   let jobData = {
     jobStatus: jobStatus,
@@ -394,6 +395,9 @@ exports.updateJobStatus = async (
   }
     if(subscriptionPlanId){
       jobData.subscriptionId = subscriptionPlanId
+    }
+    if(jobStatus === "APPROVED" && applicationLimitForJob !== undefined){
+      jobData.numberOfApplications = applicationLimitForJob
     }
   return await prisma.job.update({
     where: {

@@ -481,6 +481,7 @@ exports.updateJobStatus = async (req, res) => {
       },
     });
     let { subscriptionId } = existingJob || {};
+    let applicationLimitForJob;
     if (jobStatus === "APPROVED") {
     
       if (subscriptionId) {
@@ -496,13 +497,20 @@ exports.updateJobStatus = async (req, res) => {
         let currentPackage = await prisma.companySubscription.findFirst({
           where: {
             subscriptionId: subscriptionId,
+            companyId: companyId,
             isActive: true,
+          },
+          select: {
+            id: true,
+            numberOfApplications: true,
           },
           orderBy : {
             createdAt : "desc"
           }
         });
         if (currentPackage) {
+          applicationLimitForJob =
+            existingJob.numberOfApplications || currentPackage.numberOfApplications || 0;
           await prisma.companySubscription.update({
             where: {
               id: currentPackage.id,
@@ -561,7 +569,8 @@ exports.updateJobStatus = async (req, res) => {
       jobActiveDate,
       jobExpireDate,
       jobDaysActive,
-      subscriptionPlanId
+      subscriptionPlanId,
+      applicationLimitForJob
     );
     return successResponse(res, {}, "Job status updated successfully", {}, 200);
   } catch (error) {

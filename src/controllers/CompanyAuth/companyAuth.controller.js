@@ -6,6 +6,7 @@ const companyAuthServices = require("../../services/CompanyAuth/companyAuth.serv
 const validator = require("validator");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const {
   sendForgotPasswordEmail,
 } = require("../../helpers/sendForgotPasswordEmail");
@@ -14,6 +15,39 @@ const { sendEmailOtp } = require("../../helpers/sendMail");
 const { sendAt } = require("cron");
 const { generateOTP } = require("../../helpers/generateOTP");
 const sendWhatsAppOTP = require("../../helpers/sendsma");
+
+const TWO_FACTOR_EXPIRY_MS = 3 * 60 * 1000;
+
+const buildCompanyTokens = (company) => {
+  const payload = {
+    id: company.id,
+    email: company.email,
+    hrAndRecruiterName: company.hrAndRecruiterName,
+  };
+
+  return {
+    accessToken: jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "4h" }),
+    refreshToken: jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+      expiresIn: "7d",
+    }),
+  };
+};
+
+const buildCompanyUserData = (company) => ({
+  id: company.id,
+  email: company.email,
+  hrAndRecruiterName: company.hrAndRecruiterName,
+  designation: company.designation,
+  smallLogo: company.smallLogo,
+});
+
+const buildLoginResponse = (company) => {
+  const tokens = buildCompanyTokens(company);
+  return {
+    ...tokens,
+    userData: buildCompanyUserData(company),
+  };
+};
 
 exports.companyRegistrationStep1 = async (req, res) => {
   try {
@@ -596,40 +630,359 @@ exports.companyLogin = async (req, res) => {
       return errorResponse(res, "Invalid password", 400);
     }
 
-    let token = jwt.sign(
-      {
-        id: existingEmail.id,
-        email: existingEmail.email,
-        hrAndRecruiterName: existingEmail.hrAndRecruiterName,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "4h" }
+    const twoFactorEmailEnabled =
+      existingEmail.twoFactorEnabled && existingEmail.twoFactorEmailEnabled;
+    const twoFactorMobileEnabled =
+      existingEmail.twoFactorEnabled && existingEmail.twoFactorMobileEnabled;
 
-    );
-    let refreshToken = jwt.sign(
-      {
-        id: existingEmail.id,
-        email: existingEmail.email,
-        hrAndRecruiterName: existingEmail.hrAndRecruiterName,
-      },
-      process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" }
-    );
+    if (twoFactorEmailEnabled || twoFactorMobileEnabled) {
+      const twoFactorLoginToken = crypto.randomBytes(32).toString("hex");
+      const twoFactorEmailOtp = twoFactorEmailEnabled ? generateOTP(4) : null;
+      const twoFactorMobileOtp = twoFactorMobileEnabled ? generateOTP(4) : null;
+      const twoFactorExpiry = new Date(Date.now() + TWO_FACTOR_EXPIRY_MS);
 
+      await prisma.company.update({
+        where: { id: existingEmail.id },
+        data: {
+          twoFactorLoginToken,
+          twoFactorLoginTokenExpiry: twoFactorExpiry,
+          twoFactorEmailOtp,
+          twoFactorEmailOtpExpiry: twoFactorEmailEnabled
+            ? twoFactorExpiry
+            : null,
+          twoFactorMobileOtp,
+          twoFactorMobileOtpExpiry: twoFactorMobileEnabled
+            ? twoFactorExpiry
+            : null,
+        },
+      });
 
-    let userData = {
-      id: existingEmail.id,
-      email: existingEmail.email,
-      hrAndRecruiterName: existingEmail.hrAndRecruiterName,
-      designation: existingEmail.designation,
-      smallLogo: existingEmail.smallLogo,
-    };
-    let response = {
-      accessToken: token,
-      refreshToken: refreshToken,
-      userData,
-    };
+      if (twoFactorEmailEnabled) {
+        await sendEmailOtp({ email: existingEmail.email, otp: twoFactorEmailOtp });
+      }
+
+      if (twoFactorMobileEnabled) {
+        await sendWhatsAppOTP(existingEmail.phoneNumber, twoFactorMobileOtp);
+      }
+
+      return successResponse(
+        res,
+        {
+          requiresTwoFactor: true,
+          twoFactorToken: twoFactorLoginToken,
+          methods: {
+            email: twoFactorEmailEnabled,
+            mobile: twoFactorMobileEnabled,
+          },
+          maskedEmail: existingEmail.email.replace(/^(.{2}).*(@.*)$/, "$1***$2"),
+          maskedMobile: existingEmail.phoneNumber
+            ? existingEmail.phoneNumber.replace(/\d(?=\d{4})/g, "*")
+            : "",
+        },
+        "Two-factor verification required",
+        {},
+        200
+      );
+    }
+
+    let response = buildLoginResponse(existingEmail);
     return successResponse(res, response, "Login successfully", {}, 200);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.verifyCompanyLoginTwoFactor = async (req, res) => {
+  try {
+    const { twoFactorToken, emailOtp, mobileOtp } = req.body || {};
+
+    if (!twoFactorToken) {
+      return errorResponse(res, "Two-factor token is required", 400);
+    }
+
+    const company = await prisma.company.findFirst({
+      where: {
+        twoFactorLoginToken: twoFactorToken,
+        isProfileCompleted: true,
+        isDelete: false,
+      },
+    });
+
+    if (!company) {
+      return errorResponse(res, "Invalid two-factor session", 400);
+    }
+
+    if (
+      !company.twoFactorLoginTokenExpiry ||
+      company.twoFactorLoginTokenExpiry < new Date()
+    ) {
+      await prisma.company.update({
+        where: { id: company.id },
+        data: {
+          twoFactorLoginToken: null,
+          twoFactorLoginTokenExpiry: null,
+          twoFactorEmailOtp: null,
+          twoFactorEmailOtpExpiry: null,
+          twoFactorMobileOtp: null,
+          twoFactorMobileOtpExpiry: null,
+        },
+      });
+      return errorResponse(res, "Two-factor code expired. Please login again", 400);
+    }
+
+    const requireEmail = company.twoFactorEnabled && company.twoFactorEmailEnabled;
+    const requireMobile =
+      company.twoFactorEnabled && company.twoFactorMobileEnabled;
+
+    if (requireEmail) {
+      if (!emailOtp) {
+        return errorResponse(res, "Email OTP is required", 400);
+      }
+      if (
+        company.twoFactorEmailOtp !== emailOtp ||
+        !company.twoFactorEmailOtpExpiry ||
+        company.twoFactorEmailOtpExpiry < new Date()
+      ) {
+        return errorResponse(res, "Invalid or expired email OTP", 400);
+      }
+    }
+
+    if (requireMobile) {
+      if (!mobileOtp) {
+        return errorResponse(res, "Mobile OTP is required", 400);
+      }
+      if (
+        company.twoFactorMobileOtp !== mobileOtp ||
+        !company.twoFactorMobileOtpExpiry ||
+        company.twoFactorMobileOtpExpiry < new Date()
+      ) {
+        return errorResponse(res, "Invalid or expired mobile OTP", 400);
+      }
+    }
+
+    await prisma.company.update({
+      where: { id: company.id },
+      data: {
+        twoFactorLoginToken: null,
+        twoFactorLoginTokenExpiry: null,
+        twoFactorEmailOtp: null,
+        twoFactorEmailOtpExpiry: null,
+        twoFactorMobileOtp: null,
+        twoFactorMobileOtpExpiry: null,
+      },
+    });
+
+    return successResponse(
+      res,
+      buildLoginResponse(company),
+      "Login successfully",
+      {},
+      200
+    );
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.resendCompanyLoginTwoFactor = async (req, res) => {
+  try {
+    const { twoFactorToken } = req.body || {};
+
+    if (!twoFactorToken) {
+      return errorResponse(res, "Two-factor token is required", 400);
+    }
+
+    const company = await prisma.company.findFirst({
+      where: {
+        twoFactorLoginToken: twoFactorToken,
+        isProfileCompleted: true,
+        isDelete: false,
+      },
+    });
+
+    if (!company) {
+      return errorResponse(res, "Invalid two-factor session", 400);
+    }
+
+    if (
+      !company.twoFactorLoginTokenExpiry ||
+      company.twoFactorLoginTokenExpiry < new Date()
+    ) {
+      await prisma.company.update({
+        where: { id: company.id },
+        data: {
+          twoFactorLoginToken: null,
+          twoFactorLoginTokenExpiry: null,
+          twoFactorEmailOtp: null,
+          twoFactorEmailOtpExpiry: null,
+          twoFactorMobileOtp: null,
+          twoFactorMobileOtpExpiry: null,
+        },
+      });
+      return errorResponse(res, "Two-factor session expired. Please login again", 400);
+    }
+
+    const twoFactorEmailEnabled =
+      company.twoFactorEnabled && company.twoFactorEmailEnabled;
+    const twoFactorMobileEnabled =
+      company.twoFactorEnabled && company.twoFactorMobileEnabled;
+
+    if (!twoFactorEmailEnabled && !twoFactorMobileEnabled) {
+      return errorResponse(res, "Two-factor authentication is not enabled", 400);
+    }
+
+    const twoFactorEmailOtp = twoFactorEmailEnabled ? generateOTP(4) : null;
+    const twoFactorMobileOtp = twoFactorMobileEnabled ? generateOTP(4) : null;
+    const twoFactorExpiry = new Date(Date.now() + TWO_FACTOR_EXPIRY_MS);
+
+    await prisma.company.update({
+      where: { id: company.id },
+      data: {
+        twoFactorLoginTokenExpiry: twoFactorExpiry,
+        twoFactorEmailOtp,
+        twoFactorEmailOtpExpiry: twoFactorEmailEnabled ? twoFactorExpiry : null,
+        twoFactorMobileOtp,
+        twoFactorMobileOtpExpiry: twoFactorMobileEnabled
+          ? twoFactorExpiry
+          : null,
+      },
+    });
+
+    if (twoFactorEmailEnabled) {
+      await sendEmailOtp({ email: company.email, otp: twoFactorEmailOtp });
+    }
+
+    if (twoFactorMobileEnabled) {
+      await sendWhatsAppOTP(company.phoneNumber, twoFactorMobileOtp);
+    }
+
+    return successResponse(
+      res,
+      {
+        requiresTwoFactor: true,
+        twoFactorToken,
+        methods: {
+          email: twoFactorEmailEnabled,
+          mobile: twoFactorMobileEnabled,
+        },
+        maskedEmail: company.email.replace(/^(.{2}).*(@.*)$/, "$1***$2"),
+        maskedMobile: company.phoneNumber
+          ? company.phoneNumber.replace(/\d(?=\d{4})/g, "*")
+          : "",
+      },
+      "Two-factor OTP resent successfully",
+      {},
+      200
+    );
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.getCompanyTwoFactorSettings = async (req, res) => {
+  try {
+    const { companyId } = req.params || {};
+
+    if (!companyId || !validator.isUUID(companyId)) {
+      return errorResponse(res, "Invalid company id", 400);
+    }
+
+    const company = await prisma.company.findFirst({
+      where: { id: companyId, isDelete: false },
+      select: {
+        twoFactorEnabled: true,
+        twoFactorEmailEnabled: true,
+        twoFactorMobileEnabled: true,
+      },
+    });
+
+    if (!company) {
+      return errorResponse(res, "Company not found", 404);
+    }
+
+    return successResponse(res, company, "Two-factor settings fetched", {}, 200);
+  } catch (error) {
+    console.error(error);
+    return errorResponse(res, "Internal server error", 500);
+  }
+};
+
+exports.updateCompanyTwoFactorSettings = async (req, res) => {
+  try {
+    const { companyId } = req.params || {};
+    const {
+      twoFactorEnabled,
+      twoFactorEmailEnabled,
+      twoFactorMobileEnabled,
+    } = req.body || {};
+
+    if (!companyId || !validator.isUUID(companyId)) {
+      return errorResponse(res, "Invalid company id", 400);
+    }
+
+    const enabled = Boolean(twoFactorEnabled);
+    const emailEnabled = enabled && Boolean(twoFactorEmailEnabled);
+    const mobileEnabled = enabled && Boolean(twoFactorMobileEnabled);
+
+    if (enabled && !emailEnabled && !mobileEnabled) {
+      return errorResponse(res, "Select at least one two-factor method", 400);
+    }
+
+    const company = await prisma.company.findFirst({
+      where: { id: companyId, isDelete: false },
+      select: {
+        id: true,
+        isEmailVerified: true,
+        isMobileVerified: true,
+      },
+    });
+
+    if (!company) {
+      return errorResponse(res, "Company not found", 404);
+    }
+
+    if (emailEnabled && !company.isEmailVerified) {
+      return errorResponse(res, "Verify your email before enabling email 2FA", 400);
+    }
+
+    if (mobileEnabled && !company.isMobileVerified) {
+      return errorResponse(
+        res,
+        "Verify your mobile number before enabling mobile 2FA",
+        400
+      );
+    }
+
+    const settings = await prisma.company.update({
+      where: { id: companyId },
+      data: {
+        twoFactorEnabled: enabled,
+        twoFactorEmailEnabled: emailEnabled,
+        twoFactorMobileEnabled: mobileEnabled,
+        twoFactorLoginToken: null,
+        twoFactorLoginTokenExpiry: null,
+        twoFactorEmailOtp: null,
+        twoFactorEmailOtpExpiry: null,
+        twoFactorMobileOtp: null,
+        twoFactorMobileOtpExpiry: null,
+      },
+      select: {
+        twoFactorEnabled: true,
+        twoFactorEmailEnabled: true,
+        twoFactorMobileEnabled: true,
+      },
+    });
+
+    return successResponse(
+      res,
+      settings,
+      "Two-factor settings updated successfully",
+      {},
+      200
+    );
   } catch (error) {
     console.error(error);
     return errorResponse(res, "Internal server error", 500);

@@ -17,6 +17,69 @@ const sendWhatsAppOTP = require("../../helpers/sendsma");
 const { generateInternAboutUsPrompt } = require("../../helpers/generateJobAboutPrompt");
 const { generateInternAboutAI } = require("../../helpers/openAi");
 
+const normalizeBoolean = (value) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value === "true";
+  return Boolean(value);
+};
+
+const normalizeExperiences = (experiences) => {
+  if (!experiences) return [];
+
+  let parsedExperiences = experiences;
+  if (typeof experiences === "string") {
+    try {
+      parsedExperiences = JSON.parse(experiences);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(parsedExperiences)) {
+    parsedExperiences = [parsedExperiences];
+  }
+
+  return parsedExperiences
+    .map((experience) => ({
+      companyName: String(experience?.companyName || "").trim(),
+      designation: String(experience?.designation || "").trim(),
+      startedFrom: String(experience?.startedFrom || "").trim(),
+      endDate: String(experience?.endDate || "").trim(),
+      currentlyWorking: normalizeBoolean(experience?.currentlyWorking),
+    }))
+    .filter(
+      (experience) =>
+        experience.companyName ||
+        experience.designation ||
+        experience.startedFrom ||
+        experience.endDate ||
+        experience.currentlyWorking,
+    );
+};
+
+const calculateExperienceYears = (experiences) => {
+  const totalMonths = experiences.reduce((total, experience) => {
+    if (!experience.startedFrom) return total;
+
+    const startDate = new Date(`${experience.startedFrom}-01`);
+    const endDate = experience.currentlyWorking
+      ? new Date()
+      : new Date(`${experience.endDate}-01`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return total;
+    }
+
+    const months =
+      (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+      (endDate.getMonth() - startDate.getMonth());
+
+    return total + Math.max(months, 0);
+  }, 0);
+
+  return (totalMonths / 12).toFixed(1);
+};
+
 exports.InternRegistrationStep1 = async (req, res) => {
   try {
     let { id, fullName, email, countryCode, mobileNumber, password } =
@@ -509,6 +572,7 @@ exports.updateInternJobProfileBasedOnId = async (req, res) => {
       personalDetails,
       projectLinks,
       yearsOfExperience,
+      experiences,
       applicationType,
       linkedin,
       github,
@@ -652,6 +716,53 @@ exports.updateInternJobProfileBasedOnId = async (req, res) => {
       }));
     }
 
+    const normalizedExperiences = normalizeExperiences(experiences);
+    let totalYearsOfExperience = yearsOfExperience;
+    const requestedApplicationType =
+      applicationType?.toUpperCase() || existingIntern.applicationType;
+
+    if (requestedApplicationType === "JOB" && experiences !== undefined) {
+      if (normalizedExperiences.length === 0) {
+        return errorResponse(res, "Experience is required", 400);
+      }
+
+      for (const experience of normalizedExperiences) {
+        if (!experience.companyName) {
+          return errorResponse(res, "Experience company name is required", 400);
+        }
+        if (!experience.designation) {
+          return errorResponse(res, "Experience designation is required", 400);
+        }
+        if (!experience.startedFrom) {
+          return errorResponse(res, "Experience start date is required", 400);
+        }
+        if (!experience.currentlyWorking && !experience.endDate) {
+          return errorResponse(res, "Experience end date is required", 400);
+        }
+
+        const startDate = new Date(`${experience.startedFrom}-01`);
+        const endDate = experience.currentlyWorking
+          ? new Date()
+          : new Date(`${experience.endDate}-01`);
+
+        if (
+          Number.isNaN(startDate.getTime()) ||
+          Number.isNaN(endDate.getTime())
+        ) {
+          return errorResponse(res, "Experience date is invalid", 400);
+        }
+        if (endDate < startDate) {
+          return errorResponse(
+            res,
+            "Experience end date must be after start date",
+            400,
+          );
+        }
+      }
+
+      totalYearsOfExperience = calculateExperienceYears(normalizedExperiences);
+    }
+
     /*
     -------------------------
     Build Update Object
@@ -676,7 +787,9 @@ exports.updateInternJobProfileBasedOnId = async (req, res) => {
       personalDetails: personalDetails || undefined,
       projectLink: projectLinks || undefined,
 
-      experience: yearsOfExperience || undefined,
+      experience: totalYearsOfExperience || undefined,
+      experiences:
+        experiences !== undefined ? normalizedExperiences : undefined,
       applicationType: applicationType
         ? applicationType.toUpperCase()
         : undefined,

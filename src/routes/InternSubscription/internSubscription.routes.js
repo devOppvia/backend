@@ -11,6 +11,7 @@ router.get("/plans", internSubscriptionController.getActivePlans);
 router.post("/create-order", authMiddleware, internSubscriptionController.createOrder);
 router.post("/verify-payment", authMiddleware, internSubscriptionController.verifyPayment);
 router.post("/activate-free-plan", authMiddleware, internSubscriptionController.activateFreePlan);
+router.get("/free-plan-status", authMiddleware, internSubscriptionController.getFreePlanStatus);
 router.get("/my", authMiddleware, internSubscriptionController.getMySubscription);
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const companyAuthController = require("../../controllers/CompanyAuth/companyAuth.controller");
 const multer = require("multer");
+const authMiddleware = require("../../middlewares/authMiddleware");
 
 const storage = multer.diskStorage({
   destination: "uploads/",
@@ -116,6 +117,18 @@ router.post(
 router.post("/forgot-password", companyAuthController.forgotPasswordSendMail);
 router.post("/reset-password", companyAuthController.forgotPassword);
 router.post("/login", companyAuthController.companyLogin);
+router.post("/verify-login-2fa", companyAuthController.verifyCompanyLoginTwoFactor);
+router.post("/resend-login-2fa", companyAuthController.resendCompanyLoginTwoFactor);
+router.get(
+  "/two-factor-settings/:companyId",
+  authMiddleware,
+  companyAuthController.getCompanyTwoFactorSettings
+);
+router.put(
+  "/two-factor-settings/:companyId",
+  authMiddleware,
+  companyAuthController.updateCompanyTwoFactorSettings
+);
 router.get("/:companyId", companyAuthController.companyLogout);
 
 router.post("/verify-company-email-otp/:companyId", companyAuthController.verifyCompanyEmailOtp)
